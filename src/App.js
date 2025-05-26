@@ -1,36 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from './firebase';
-import AuthForm from './components/AuthForm';
-import CountrySelector from './components/CountrySelector';
-import BrandList from './components/BrandList';
+import React, { useEffect } from "react";
+import { db } from "./firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 function App() {
-  const [user, setUser] = useState(null);
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
+    const testFirestore = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "test"));
+        querySnapshot.forEach((doc) => {
+          console.log(`${doc.id} =>`, doc.data());
+        });
+        alert("✅ Firebase Firestore is working!");
+      } catch (error) {
+        console.error("❌ Firebase Firestore error:", error);
+        alert("❌ Firebase Firestore connection failed!");
+      }
+    };
+
+    testFirestore();
   }, []);
 
-  const handleLogout = () => {
-    signOut(auth);
-  };
-
-  if (!user) {
-    return <AuthForm onAuthSuccess={() => {}} />;
-  }
-
   return (
-    <div className="App">
-      <header>
-        <h1>Stash or Trash???</h1>
-        <button onClick={handleLogout}>Logout</button>
-      </header>
-      <CountrySelector />
-      <BrandList />
+    <div>
+      <h1>🔥 Stash or Trash??? Firebase Test</h1>
+      <p>Check the alert message and browser console.</p>
     </div>
   );
 }
