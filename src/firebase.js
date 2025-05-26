@@ -1,4 +1,5 @@
 // src/firebase.js
+
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -8,10 +9,10 @@ const firebaseConfig = {
   apiKey: "AIzaSyBu1iRSWC3l7VGJvHyD49xXqqGdEIa9Kis",
   authDomain: "stashortrash-acbbf.firebaseapp.com",
   projectId: "stashortrash-acbbf",
-  storageBucket: "stashortrash-acbbf.appspot.com",
+  storageBucket: "stashortrash-acbbf.firebasestorage.app",
   messagingSenderId: "782905521538",
-  appId: "1:782905521538:web:9f4d415266c1f6ac82cb9b",
-  measurementId: "G-G9Z5CWWL6Z"
+  appId: "1:782905521538:web:845abba76d9c799182cb9b",
+  measurementId: "G-9M2B9DJ0C5"
 };
 
 const app = initializeApp(firebaseConfig);
