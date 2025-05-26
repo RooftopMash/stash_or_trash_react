@@ -1,1 +1,8 @@
-
+{
+  "welcome": "欢迎来到 Stash or Trash???",
+  "choose_country": "选择你的国家",
+  "choose_language": "选择你的语言",
+  "brands": "品牌",
+  "suggest_brand": "推荐一个品牌",
+  "admin_panel": "管理面板"
+}
