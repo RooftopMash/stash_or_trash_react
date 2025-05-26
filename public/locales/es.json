@@ -1,1 +1,8 @@
-
+{
+  "welcome": "¡Bienvenido a Stash o Trash???",
+  "choose_country": "Elige tu país",
+  "choose_language": "Elige tu idioma",
+  "brands": "Marcas",
+  "suggest_brand": "Sugerir una marca",
+  "admin_panel": "Panel de administración"
+}
