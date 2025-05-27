@@ -1,0 +1,33 @@
+{
+  "short_name": "StashOrTrash",
+  "name": "Stash or Trash – Discover, Suggest & Explore Global Brands",
+  "description": "Stash or Trash is your global platform to discover, suggest, and explore brands in your language. Community-powered, multilingual, and accessible for everyone.",
+  "icons": [
+    {
+      "src": "/icons/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable_icon.png",
+      "sizes": "196x196",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#00aaff",
+  "theme_color": "#00aaff",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr"
+}
