@@ -1,48 +1,56 @@
 import React, { useEffect, useState } from "react";
-import { db } from "./firebase"; // your Firestore instance
-import { collection, getDocs } from "firebase/firestore";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Home from "./pages/Home";
+import Brands from "./pages/Brands";
+import AdminPanel from "./components/AdminPanel";
+import AuthForm from "./components/AuthForm";
+import Profile from "./pages/Profile";
+import Navbar from "./components/Navbar";
+import { auth } from "./firebase";
 
+// This keeps your user session in sync
 function App() {
-  const [brands, setBrands] = useState([]);
-  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
 
-  // Fetch brands on mount
   useEffect(() => {
-    const fetchBrands = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "brands"));
-        const brandsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setBrands(brandsList);
-      } catch (err) {
-        // For developers
-        console.error("❌ Firestore error while fetching brands:", err);
-
-        // For users
-        setError("Failed to load brands. Please check your connection or contact support.");
-      }
-    };
-
-    fetchBrands();
+    const unsub = auth.onAuthStateChanged(setUser);
+    return unsub;
   }, []);
 
   return (
-    <div>
-      <h1>StashOrTrash Brands</h1>
-      <ul>
-        {brands.map(brand => (
-          <li key={brand.id}>{brand.name}</li>
-        ))}
-      </ul>
-
-      {/* Error Snackbar for users */}
-      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
-        <Alert onClose={() => setError(null)} severity="error" sx={{ width: '100%' }}>
-          {error}
-        </Alert>
-      </Snackbar>
-    </div>
+    <Router>
+      <Navbar user={user} />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            user ? <Navigate to="/brands" /> : <Home />
+          }
+        />
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/brands" /> : <AuthForm />}
+        />
+        <Route
+          path="/signup"
+          element={user ? <Navigate to="/brands" /> : <AuthForm signup />}
+        />
+        <Route
+          path="/brands"
+          element={user ? <Brands user={user} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/admin"
+          element={user ? <AdminPanel /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/profile"
+          element={user ? <Profile user={user} /> : <Navigate to="/login" />}
+        />
+        {/* 404 fallback */}
+        <Route path="*" element={<h2 style={{textAlign:'center'}}>Page Not Found</h2>} />
+      </Routes>
+    </Router>
   );
 }
 
