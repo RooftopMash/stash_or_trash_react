@@ -1,114 +1,123 @@
 // src/App.js
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { I18nextProvider } from 'react-i18next';
+import i18n from './i18n'; // Correct path to your i18n config
+import { useTranslation } from 'react-i18next';
 
 // Import your components
 import Brands from "./pages/Brands";
 import AdminPanel from "./components/AdminPanel";
 import AuthForm from "./components/AuthForm";
-import Profile from "./pages/Profile";
 import Navbar from "./components/Navbar";
+import ProfilePage from "./pages/ProfilePage"; // Corrected import path for the new component
 
-// Import your Firebase instances
-import { auth, db } from "./firebase"; // Make sure db is imported if used in a test elsewhere
-import { collection, getDocs } from "firebase/firestore"; // For the Firebase connection test if you keep it
+// Import your Firebase instances and initialization function
+import { auth, db, collection, getDocs, initializeFirebaseCanvasAuth } from "./firebase";
 
 // Fallback UI for any unmatched routes
-const NotFound = () => (
-  <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Page Not Found</h2>
-);
+const NotFound = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <h2 className="text-3xl font-bold text-gray-800">{t('pageNotFound')}</h2>
+    </div>
+  );
+};
 
 function App() {
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [firestoreConnectionStatus, setFirestoreConnectionStatus] = useState('Checking Firebase connection...');
+  const { t } = useTranslation();
 
   // 1. Firebase Authentication State Listener
   useEffect(() => {
+    initializeFirebaseCanvasAuth();
+
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       setUser(user);
-      setCheckingAuth(false); // Authentication check is complete
+      setCheckingAuth(false);
     });
-    // Clean up the subscription when the component unmounts
     return unsubscribeAuth;
   }, []);
 
-  // 2. Firebase Firestore Connection Test (Modified for better UX)
+  // 2. Firebase Firestore Connection Test
   useEffect(() => {
     const testFirestoreConnection = async () => {
       try {
-        // Attempt a simple read to confirm connection
-        // It's good practice to ensure your 'test' collection exists and has appropriate rules
         const querySnapshot = await getDocs(collection(db, "test"));
         querySnapshot.forEach((doc) => {
-          // Log data from the 'test' collection, but don't alert the user
           console.log(`Firebase Firestore test doc: ${doc.id} =>`, doc.data());
         });
-        setFirestoreConnectionStatus('✅ Firebase Firestore connected successfully.');
-        console.log('✅ Firebase Firestore connected successfully.'); // Log to console for dev
+        setFirestoreConnectionStatus(t('firebaseConnected'));
+        console.log(t('firebaseConnected'));
       } catch (error) {
-        setFirestoreConnectionStatus(`❌ Firebase Firestore connection failed: ${error.message}`);
+        setFirestoreConnectionStatus(t('firebaseConnectionFailed', { message: error.message }));
         console.error("❌ Firebase Firestore connection error:", error);
       }
     };
 
-    // Run the Firestore test only once after component mounts
     testFirestoreConnection();
-  }, []); // Empty dependency array means this runs once on mount
+  }, [t]);
 
   // Display a loading message while authentication state is being determined
   if (checkingAuth) {
     return (
-      <div style={{ textAlign: "center", padding: "2rem" }}>
-        <p>Checking authentication...</p>
-        <p>{firestoreConnectionStatus}</p> {/* Show Firestore status during loading */}
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4 rounded-lg shadow-md">
+        <p className="text-lg font-semibold text-gray-700 mb-2">{t('checkingAuthentication')}</p>
+        <p className="text-sm text-gray-600">{firestoreConnectionStatus}</p>
       </div>
     );
   }
 
-  // Once authentication is checked, render the main application with routing
   return (
     <Router>
-      {/* Navbar will always be visible */}
       <Navbar user={user} />
 
-      {/* Routes define which component to render based on the URL */}
-      <Routes>
-        {/* Root path: Redirects based on authentication status */}
-        <Route
-          path="/"
-          element={user ? <Navigate to="/brands" /> : <Navigate to="/login" />}
-        />
+      <main className="container mx-auto p-4 sm:p-6 lg:p-8">
+        <Routes>
+          <Route
+            path="/"
+            element={user ? <Navigate to="/brands" /> : <Navigate to="/login" />}
+          />
 
-        {/* Login/Signup paths: Redirects if already authenticated */}
-        <Route
-          path="/login"
-          element={user ? <Navigate to="/brands" /> : <AuthForm />}
-        />
-        <Route
-          path="/signup"
-          element={user ? <Navigate to="/brands" /> : <AuthForm signup />}
-        />
+          <Route
+            path="/login"
+            element={user ? <Navigate to="/brands" /> : <AuthForm />}
+          />
+          <Route
+            path="/signup"
+            element={user ? <Navigate to="/brands" /> : <AuthForm signup />}
+          />
 
-        {/* Protected Routes: Only accessible if user is logged in */}
-        <Route
-          path="/brands"
-          element={user ? <Brands user={user} /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/admin"
-          element={user ? <AdminPanel /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/profile"
-          element={user ? <Profile user={user} /> : <Navigate to="/login" />}
-        />
+          <Route
+            path="/brands"
+            element={user ? <Brands user={user} /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/admin"
+            element={user ? <AdminPanel /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/profile"
+            element={user ? <ProfilePage user={user} /> : <Navigate to="/login" />}
+          />
 
-        {/* Fallback route for any undefined paths */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
     </Router>
   );
 }
 
-export default App;
+// Wrap the App component with I18nextProvider
+function WrappedApp() {
+  return (
+    <I18nextProvider i18n={i18n}>
+      <App />
+    </I18nextProvider>
+  );
+}
+
+export default WrappedApp;
