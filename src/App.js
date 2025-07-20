@@ -10,7 +10,7 @@ import Brands from "./pages/Brands";
 import AdminPanel from "./components/AdminPanel";
 import AuthForm from "./components/AuthForm";
 import Navbar from "./components/Navbar";
-import ProfilePage from "./pages/ProfilePage"; // Corrected import path for the new component
+import ProfilePage from "./pages/ProfilePage"; // THIS LINE IS CRUCIAL: Ensure it's exactly './pages/ProfilePage'
 
 // Import your Firebase instances and initialization function
 import { auth, db, collection, getDocs, initializeFirebaseCanvasAuth } from "./firebase";
