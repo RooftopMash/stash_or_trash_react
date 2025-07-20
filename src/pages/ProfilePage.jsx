@@ -802,24 +802,16 @@ const ProfilePage = ({ user }) => {
     });
 
     return () => unsubscribe();
-  }, [currentUserId, user]);
+  }, [currentUserId, user]); // Added user to dependency array
 
   // Fetch all users (for friend search)
   useEffect(() => {
     const usersCollectionRef = collection(db, `artifacts/${appId}/users`);
     const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
-      // Correctly map user data, ensuring 'profile.data' path for nested data
-      const usersData = snapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          // Assuming the actual profile data is nested under 'profile.data'
-          // Adjust this path if your Firestore structure is different
-          name: data.profile?.data?.name || data.email, // Fallback to email if name not found
-          email: data.email,
-          profilePicUrl: data.profile?.data?.profilePicUrl || ''
-        };
-      });
+      const usersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data().profile.data
+      }));
       setAllUsers(usersData);
     }, (error) => {
       console.error("Error fetching all users:", error);
