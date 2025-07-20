@@ -69,18 +69,10 @@
       }
     </style>
 
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS CDN (Keep this as it's a common way to include Tailwind) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- React and ReactDOM CDNs - IMPORTANT: Load these BEFORE i18next libraries -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-    <!-- i18next and related libraries from CDN -->
-    <script src="https://unpkg.com/i18next@23.11.5/dist/umd/i18next.min.js"></script>
-    <script src="https://unpkg.com/react-i18next@14.1.2/dist/umd/react-i18next.min.js"></script>
-    <script src="https://unpkg.com/i18next-browser-languagedetector@8.0.0/dist/umd/i18nextBrowserLanguageDetector.min.js"></script>
-    <script src="https://unpkg.com/i18next-http-backend@2.5.2/dist/umd/i18nextHttpBackend.min.js"></script>
+    <!-- IMPORTANT: No React, ReactDOM, or i18next CDN scripts here. They will be bundled by react-scripts. -->
 
   </head>
   <body>
