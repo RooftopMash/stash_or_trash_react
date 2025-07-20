@@ -468,9 +468,9 @@ const FriendsManager = ({ userId, friends, friendRequests, onSendRequest, onAcce
         {requestStatus && <p className="text-sm text-center mb-2">{requestStatus}</p>}
         {filteredUsers.length === 0 && searchTerm ? (
           <p className="text-gray-600 text-center">{t('noUsersFound')}</p>
-        ) : filteredUsers.length === 0 && !searchTerm ? (
-          <p className="text-gray-600 text-center">{t('startTypingToFindUsers')}</p>
-        ) : (
+            ) : filteredUsers.length === 0 && !searchTerm ? (
+              <p className="text-gray-600 text-center">{t('startTypingToFindUsers')}</p>
+            ) : (
           <ul className="space-y-2 max-h-60 overflow-y-auto">
             {filteredUsers.map(user => (
               <li key={user.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-md border border-gray-200">
@@ -810,7 +810,10 @@ const ProfilePage = ({ user }) => {
     const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
       const usersData = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data().profile.data
+        // Assuming profile data is nested like this: doc.data().profile.data
+        // If your user data is directly under doc.data(), adjust this line:
+        // ...doc.data()
+        ...(doc.data().profile && doc.data().profile.data ? doc.data().profile.data : doc.data())
       }));
       setAllUsers(usersData);
     }, (error) => {
@@ -904,13 +907,13 @@ const ProfilePage = ({ user }) => {
 
 
   const handleSaveProfile = async (profileData) => {
-    if (!currentUserId) throw new Error("User not authenticated.");
+    if (!currentUserId) throw new Error(t('userNotAuthenticated'));
     const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, "data");
     await updateDoc(userDocRef, profileData);
   };
 
   const handleUploadProfilePic = async (file) => {
-    if (!currentUserId) throw new Error("User not authenticated.");
+    if (!currentUserId) throw new Error(t('userNotAuthenticated'));
     const storageRef = ref(storage, `artifacts/${appId}/users/${currentUserId}/profile_pictures/${file.name}`);
     await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(storageRef);
@@ -920,13 +923,13 @@ const ProfilePage = ({ user }) => {
   };
 
   const handleSaveSocialMedia = async (socialMediaLinks) => {
-    if (!currentUserId) throw new Error("User not authenticated.");
+    if (!currentUserId) throw new Error(t('userNotAuthenticated'));
     const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, "data");
     await updateDoc(userDocRef, { socialMedia: socialMediaLinks });
   };
 
   const handleAddWallPost = async (content, visibility) => {
-    if (!currentUserId) throw new Error("User not authenticated.");
+    if (!currentUserId) throw new Error(t('userNotAuthenticated'));
     await addDoc(collection(db, `artifacts/${appId}/public/data/wallPosts`), {
       userId: currentUserId,
       userName: currentUserName,
