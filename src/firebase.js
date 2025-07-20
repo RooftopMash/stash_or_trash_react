@@ -3,7 +3,7 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithCustomToken, signInAnonymously } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, LinkedInProvider, signInWithCustomToken, signInAnonymously } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -39,9 +39,10 @@ const linkedInProvider = new GoogleAuthProvider(); // Placeholder: Use Google fo
 
 // Global variables provided by the Canvas environment for authentication
 // These are crucial for Firebase authentication in the Canvas environment.
-const canvasAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfigFromCanvas = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+// Access them via `window` to avoid 'no-undef' errors during build
+const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
+const firebaseConfigFromCanvas = JSON.parse(typeof window.__firebase_config !== 'undefined' ? window.__firebase_config : '{}');
+const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
 
 // Function to handle initial Firebase authentication in Canvas
 const initializeFirebaseCanvasAuth = async () => {
@@ -80,5 +81,5 @@ export {
   uploadBytes,
   getDownloadURL,
   initializeFirebaseCanvasAuth,
-  canvasAppId as appId // Export Canvas-provided appId for use in Firestore paths
+  appId // Export appId for use in Firestore paths
 };
