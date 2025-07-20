@@ -1,6 +1,7 @@
 // src/pages/ProfilePage.jsx
 import React, { useState, useEffect } from 'react';
-import { db, auth, storage, collection, doc, getDoc, setDoc, updateDoc, ref, uploadBytes, getDownloadURL, onSnapshot, addDoc, query, where, serverTimestamp, appId } from '../firebase';
+// ADDED getDocs to the import list
+import { db, auth, storage, collection, doc, getDoc, setDoc, updateDoc, ref, uploadBytes, getDownloadURL, onSnapshot, addDoc, query, where, serverTimestamp, appId, getDocs } from '../firebase';
 import { useTranslation } from 'react-i18next';
 
 // Sub-components for ProfilePage
@@ -14,7 +15,7 @@ const ProfileDetailsForm = ({ user, userData, onSave, onUploadProfilePic }) => {
   const [statusMessage, setStatusMessage] = useState('');
   const [profilePicFile, setProfilePicFile] = useState(null);
   const [isLoadingBio, setIsLoadingBio] = useState(false);
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Use translation hook
 
   useEffect(() => {
     if (userData) {
@@ -206,7 +207,7 @@ const SocialMediaLinks = ({ userData, onSave }) => {
   const [twitter, setTwitter] = useState(userData?.socialMedia?.twitter || '');
   const [github, setGithub] = useState(userData?.socialMedia?.github || '');
   const [statusMessage, setStatusMessage] = useState('');
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Use translation hook
 
   useEffect(() => {
     if (userData) {
@@ -281,7 +282,7 @@ const UserWall = ({ userId, currentUserName, isPublicWall, wallPosts, onAddPost,
   const [newPostContent, setNewPostContent] = useState('');
   const [postStatus, setPostStatus] = useState('');
   const [postVisibility, setPostVisibility] = useState('public');
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Use translation hook
 
   const handleAddPost = async (e) => {
     e.preventDefault();
@@ -381,7 +382,7 @@ const UserWall = ({ userId, currentUserName, isPublicWall, wallPosts, onAddPost,
 const FriendsManager = ({ userId, friends, friendRequests, onSendRequest, onAcceptRequest, onRejectRequest, allUsers }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [requestStatus, setRequestStatus] = useState('');
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Use translation hook
 
   const filteredUsers = allUsers.filter(u =>
     u.id !== userId &&
@@ -501,7 +502,7 @@ const ChatInterface = ({ userId, currentUserName, friends }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [chatStatus, setChatStatus] = useState('');
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Use translation hook
 
   useEffect(() => {
     if (!selectedFriend || !userId) {
@@ -628,7 +629,7 @@ const RatingSystem = ({ userId, targetUserId, targetUserName }) => {
   const [statusMessage, setStatusMessage] = useState('');
   const [averageRating, setAverageRating] = useState(null);
   const [totalRatings, setTotalRatings] = useState(0);
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Use translation hook
 
   useEffect(() => {
     if (!targetUserId) return;
@@ -674,7 +675,7 @@ const RatingSystem = ({ userId, targetUserId, targetUserName }) => {
         where('raterUserId', '==', userId),
         where('ratedUserId', '==', targetUserId)
       );
-      const existingRatings = await getDocs(userRatingQuery);
+      const existingRatings = await getDocs(userRatingQuery); // getDocs is used here
 
       if (!existingRatings.empty) {
         setStatusMessage(t('alreadyRated'));
@@ -753,7 +754,7 @@ const ProfilePage = ({ user }) => {
   const [friendRequests, setFriendRequests] = useState([]);
   const [friends, setFriends] = useState([]);
   const [isPublicWall, setIsPublicWall] = useState(true);
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Use translation hook
 
   const currentUserId = user?.uid;
   const currentUserName = userData?.name || user?.email || 'Anonymous User';
@@ -807,13 +808,18 @@ const ProfilePage = ({ user }) => {
   useEffect(() => {
     const usersCollectionRef = collection(db, `artifacts/${appId}/users`);
     const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
-      const usersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        // Assuming profile data is nested like this: doc.data().profile.data
-        // If your user data is directly under doc.data(), adjust this line:
-        // ...doc.data()
-        ...(doc.data().profile && doc.data().profile.data ? doc.data().profile.data : doc.data())
-      }));
+      // Correctly map user data, ensuring 'profile.data' path for nested data
+      const usersData = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          // Assuming the actual profile data is nested under 'profile.data'
+          // Adjust this path if your Firestore structure is different
+          name: data.profile?.data?.name || data.email, // Fallback to email if name not found
+          email: data.email,
+          profilePicUrl: data.profile?.data?.profilePicUrl || ''
+        };
+      });
       setAllUsers(usersData);
     }, (error) => {
       console.error("Error fetching all users:", error);
@@ -906,13 +912,13 @@ const ProfilePage = ({ user }) => {
 
 
   const handleSaveProfile = async (profileData) => {
-    if (!currentUserId) throw new Error(t('userNotAuthenticated'));
+    if (!currentUserId) throw new Error("User not authenticated.");
     const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, "data");
     await updateDoc(userDocRef, profileData);
   };
 
   const handleUploadProfilePic = async (file) => {
-    if (!currentUserId) throw new Error(t('userNotAuthenticated'));
+    if (!currentUserId) throw new Error("User not authenticated.");
     const storageRef = ref(storage, `artifacts/${appId}/users/${currentUserId}/profile_pictures/${file.name}`);
     await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(storageRef);
@@ -922,13 +928,13 @@ const ProfilePage = ({ user }) => {
   };
 
   const handleSaveSocialMedia = async (socialMediaLinks) => {
-    if (!currentUserId) throw new Error(t('userNotAuthenticated'));
+    if (!currentUserId) throw new Error("User not authenticated.");
     const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, "data");
     await updateDoc(userDocRef, { socialMedia: socialMediaLinks });
   };
 
   const handleAddWallPost = async (content, visibility) => {
-    if (!currentUserId) throw new Error(t('userNotAuthenticated'));
+    if (!currentUserId) throw new Error("User not authenticated.");
     await addDoc(collection(db, `artifacts/${appId}/public/data/wallPosts`), {
       userId: currentUserId,
       userName: currentUserName,
