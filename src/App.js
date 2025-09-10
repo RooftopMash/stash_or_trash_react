@@ -154,6 +154,7 @@ function App() {
     try {
       if (typeof __firebase_config !== 'undefined') {
         // This is the Canvas environment
+        console.log("Initializing Firebase in Canvas environment.");
         firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
