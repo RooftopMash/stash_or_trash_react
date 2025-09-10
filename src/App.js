@@ -147,16 +147,15 @@ function App() {
   // Initialize Firebase and set up auth listener
   useEffect(() => {
     let firebaseConfig;
-    let auth, db;
+    let auth;
     let unsubscribeAuth;
 
     try {
       if (typeof __firebase_config !== 'undefined') {
-        // Canvas environment
+        // This is the Canvas environment
         firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
-        db = getFirestore(app);
 
         if (typeof __initial_auth_token !== 'undefined') {
           signInWithCustomToken(auth, __initial_auth_token);
@@ -165,7 +164,7 @@ function App() {
         }
 
       } else {
-        // Fallback for a standard development environment
+        // This is a standard development environment (e.g., Vite)
         console.warn("Canvas environment variables not found. Using VITE environment variables.");
         firebaseConfig = {
           apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -177,7 +176,6 @@ function App() {
         };
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
-        db = getFirestore(app);
       }
 
       unsubscribeAuth = onAuthStateChanged(auth, (user) => {
