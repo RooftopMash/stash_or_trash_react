@@ -1,37 +1,30 @@
 import React, { useEffect, useState } from "react";
 import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
-
-// Helper function to check for Firebase globals and initialize
-const initializeFirebaseCanvasAuth = () => {
-  const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  if (typeof __initial_auth_token !== 'undefined') {
-    signInWithCustomToken(auth, __initial_auth_token).catch((error) => {
-      console.error("Firebase Auth Error:", error);
-    });
-  } else {
-    signInAnonymously(auth).catch((error) => {
-      console.error("Firebase Auth Error:", error);
-    });
-  }
-
-  return { auth, db };
-};
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInAnonymously, signInWithCustomToken } from "firebase/auth";
+import { getFirestore, collection, getDocs, doc, setDoc } from "firebase/firestore";
 
 // Navbar Component
 const Navbar = ({ user, setPage }) => {
+  const handleLogout = async () => {
+    const auth = getAuth();
+    try {
+      await signOut(auth);
+      setPage('login');
+    } catch (error) {
+      console.error("Logout Error:", error);
+    }
+  };
+
   return (
     <nav className="bg-white shadow-md p-4 flex justify-between items-center rounded-lg">
       <h1 className="text-xl font-bold text-gray-800">Stash or Trash</h1>
       <div className="space-x-4">
         <button onClick={() => setPage('brands')} className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Brands</button>
         {user ? (
-          <button onClick={() => setPage('profile')} className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Profile</button>
+          <>
+            <button onClick={() => setPage('profile')} className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Profile</button>
+            <button onClick={handleLogout} className="text-red-500 hover:text-red-700 font-semibold transition-colors duration-200">Logout</button>
+          </>
         ) : (
           <button onClick={() => setPage('login')} className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Login</button>
         )}
@@ -42,23 +35,57 @@ const Navbar = ({ user, setPage }) => {
 
 // AuthForm Component
 const AuthForm = ({ setPage, signup }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    const auth = getAuth();
+    try {
+      if (signup) {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">{signup ? 'Sign Up' : 'Login'}</h2>
-        <form className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-gray-700 font-semibold mb-2" htmlFor="email">Email</label>
-            <input type="email" id="email" className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200" placeholder="user@example.com" />
+            <input 
+              type="email" 
+              id="email" 
+              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200" 
+              placeholder="user@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
           <div>
             <label className="block text-gray-700 font-semibold mb-2" htmlFor="password">Password</label>
-            <input type="password" id="password" className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200" placeholder="••••••••" />
+            <input 
+              type="password" 
+              id="password" 
+              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200" 
+              placeholder="••••••••" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
           <button type="submit" className="w-full bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors duration-200">
             {signup ? 'Sign Up' : 'Login'}
           </button>
         </form>
+        {error && <p className="text-red-500 text-center mt-4 text-sm">{error}</p>}
         <div className="mt-4 text-center">
           {signup ? (
             <p className="text-sm text-gray-600">Already have an account? <span onClick={() => setPage('login')} className="text-gray-800 font-semibold cursor-pointer hover:underline">Log in</span></p>
@@ -119,15 +146,56 @@ function App() {
   
   // Initialize Firebase and set up auth listener
   useEffect(() => {
-    const { auth, db } = initializeFirebaseCanvasAuth();
-    
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setCheckingAuth(false);
-      setCurrentPage(user ? 'brands' : 'login');
-    });
+    let firebaseConfig;
+    let auth, db;
+    let unsubscribeAuth;
 
-    return unsubscribeAuth;
+    try {
+      if (typeof __firebase_config !== 'undefined') {
+        // Canvas environment
+        firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        if (typeof __initial_auth_token !== 'undefined') {
+          signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          signInAnonymously(auth);
+        }
+
+      } else {
+        // Fallback for a standard development environment
+        console.warn("Canvas environment variables not found. Using VITE environment variables.");
+        firebaseConfig = {
+          apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+          authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+          projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+          storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+          appId: import.meta.env.VITE_FIREBASE_APP_ID,
+        };
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+      }
+
+      unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+        setCheckingAuth(false);
+        setCurrentPage(user ? 'brands' : 'login');
+      });
+
+    } catch (e) {
+      console.error("Firebase initialization failed:", e);
+      setCheckingAuth(false);
+    }
+    
+    return () => {
+      if (unsubscribeAuth) {
+        unsubscribeAuth();
+      }
+    };
   }, []);
 
   const renderPage = () => {
@@ -141,7 +209,7 @@ function App() {
     
     switch (currentPage) {
       case 'brands':
-        return user ? <Brands user={user} /> : <AuthForm setPage={setCurrentPage} />;
+        return <Brands user={user} />;
       case 'admin':
         return user ? <AdminPanel /> : <AuthForm setPage={setCurrentPage} />;
       case 'profile':
@@ -149,7 +217,7 @@ function App() {
       case 'login':
         return user ? <Brands user={user} /> : <AuthForm setPage={setCurrentPage} />;
       case 'signup':
-        return user ? <Brands user={user} /> : <AuthForm setPage={setCurrentPage} signup />;
+        return <AuthForm setPage={setCurrentPage} signup />;
       default:
         return <NotFound />;
     }
