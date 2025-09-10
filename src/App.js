@@ -148,6 +148,7 @@ function App() {
   useEffect(() => {
     let firebaseConfig;
     let auth;
+    let db;
     let unsubscribeAuth;
 
     try {
@@ -156,13 +157,13 @@ function App() {
         firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
+        db = getFirestore(app);
 
         if (typeof __initial_auth_token !== 'undefined') {
           signInWithCustomToken(auth, __initial_auth_token);
         } else {
           signInAnonymously(auth);
         }
-
       } else {
         // This is a standard development environment (e.g., Vite)
         console.warn("Canvas environment variables not found. Using VITE environment variables.");
@@ -176,6 +177,7 @@ function App() {
         };
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
+        db = getFirestore(app);
       }
 
       unsubscribeAuth = onAuthStateChanged(auth, (user) => {
