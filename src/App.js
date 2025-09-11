@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { getFirestore, collection, getDocs, doc, setDoc } from "firebase/firestore";
 
 // Navbar Component
-const Navbar = ({ user, setPage }) => {
+const Navbar = ({ user }) => {
   const handleLogout = async () => {
     const auth = getAuth();
     try {
       await signOut(auth);
-      setPage('login');
     } catch (error) {
       console.error("Logout Error:", error);
     }
@@ -19,14 +19,15 @@ const Navbar = ({ user, setPage }) => {
     <nav className="bg-white shadow-md p-4 flex justify-between items-center rounded-lg">
       <h1 className="text-xl font-bold text-gray-800">Stash or Trash</h1>
       <div className="space-x-4">
-        <button onClick={() => setPage('brands')} className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Brands</button>
+        {/* We use a simple anchor tag for navigation since the Router handles the change */}
+        <a href="/brands" className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Brands</a>
         {user ? (
           <>
-            <button onClick={() => setPage('profile')} className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Profile</button>
+            <a href="/profile" className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Profile</a>
             <button onClick={handleLogout} className="text-red-500 hover:text-red-700 font-semibold transition-colors duration-200">Logout</button>
           </>
         ) : (
-          <button onClick={() => setPage('login')} className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Login</button>
+          <a href="/login" className="text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200">Login</a>
         )}
       </div>
     </nav>
@@ -34,7 +35,7 @@ const Navbar = ({ user, setPage }) => {
 };
 
 // AuthForm Component
-const AuthForm = ({ setPage, signup }) => {
+const AuthForm = ({ signup }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
@@ -88,9 +89,9 @@ const AuthForm = ({ setPage, signup }) => {
         {error && <p className="text-red-500 text-center mt-4 text-sm">{error}</p>}
         <div className="mt-4 text-center">
           {signup ? (
-            <p className="text-sm text-gray-600">Already have an account? <span onClick={() => setPage('login')} className="text-gray-800 font-semibold cursor-pointer hover:underline">Log in</span></p>
+            <p className="text-sm text-gray-600">Already have an account? <a href="/login" className="text-gray-800 font-semibold cursor-pointer hover:underline">Log in</a></p>
           ) : (
-            <p className="text-sm text-gray-600">Don't have an account? <span onClick={() => setPage('signup')} className="text-gray-800 font-semibold cursor-pointer hover:underline">Sign up</span></p>
+            <p className="text-sm text-gray-600">Don't have an account? <a href="/signup" className="text-gray-800 font-semibold cursor-pointer hover:underline">Sign up</a></p>
           )}
         </div>
       </div>
@@ -117,12 +118,12 @@ const AdminPanel = () => (
 
 // ProfilePage Component
 const ProfilePage = ({ user }) => (
-  <div className="flex flex-col items-center justify-center min-h-screen p-4">
+  <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 rounded-lg shadow-md">
     <h2 className="text-4xl font-bold text-gray-800 mb-4">Profile Page</h2>
     <p className="text-lg text-gray-600 text-center max-w-lg">View and manage your user profile and settings here.</p>
     {user && (
-      <div className="mt-6 p-6 bg-white rounded-lg shadow-md w-full max-w-md">
-        <h3 className="text-xl font-bold mb-2">User Details:</h3>
+      <div className="mt-6 p-6 bg-white rounded-lg shadow-md w-full max-w-md border-t-4 border-gray-800">
+        <h3 className="text-xl font-bold mb-2 text-gray-800">User Details:</h3>
         <p className="text-sm text-gray-700"><strong>User ID:</strong> <span className="font-mono break-all">{user.uid}</span></p>
         <p className="text-sm text-gray-700"><strong>Email:</strong> {user.email || 'N/A'}</p>
         <p className="text-sm text-gray-700"><strong>Is Anonymous:</strong> {user.isAnonymous ? 'Yes' : 'No'}</p>
@@ -142,7 +143,6 @@ const NotFound = () => (
 function App() {
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [currentPage, setCurrentPage] = useState('loading');
   
   // Initialize Firebase and set up auth listener
   useEffect(() => {
@@ -153,7 +153,6 @@ function App() {
 
     try {
       if (typeof __firebase_config !== 'undefined') {
-        // This is the Canvas environment
         console.log("Initializing Firebase in Canvas environment.");
         firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
@@ -166,7 +165,6 @@ function App() {
           signInAnonymously(auth);
         }
       } else {
-        // This is a standard development environment (e.g., Vite)
         console.warn("Canvas environment variables not found. Using VITE environment variables.");
         firebaseConfig = {
           apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -184,7 +182,6 @@ function App() {
       unsubscribeAuth = onAuthStateChanged(auth, (user) => {
         setUser(user);
         setCheckingAuth(false);
-        setCurrentPage(user ? 'brands' : 'login');
       });
 
     } catch (e) {
@@ -199,38 +196,48 @@ function App() {
     };
   }, []);
 
-  const renderPage = () => {
-    if (checkingAuth) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4 rounded-lg shadow-md">
-          <p className="text-lg font-semibold text-gray-700 mb-2">Checking authentication...</p>
-        </div>
-      );
-    }
-    
-    switch (currentPage) {
-      case 'brands':
-        return <Brands user={user} />;
-      case 'admin':
-        return user ? <AdminPanel /> : <AuthForm setPage={setCurrentPage} />;
-      case 'profile':
-        return user ? <ProfilePage user={user} /> : <AuthForm setPage={setCurrentPage} />;
-      case 'login':
-        return user ? <Brands user={user} /> : <AuthForm setPage={setCurrentPage} />;
-      case 'signup':
-        return <AuthForm setPage={setCurrentPage} signup />;
-      default:
-        return <NotFound />;
-    }
-  };
+  // Display a loading message while authentication state is being determined
+  if (checkingAuth) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4 rounded-lg shadow-md">
+        <p className="text-lg font-semibold text-gray-700 mb-2">Checking Authentication...</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <Navbar user={user} setPage={setCurrentPage} />
+    <Router>
+      <Navbar user={user} />
       <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-        {renderPage()}
+        <Routes>
+          <Route
+            path="/"
+            element={user ? <Navigate to="/brands" /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/login"
+            element={user ? <Navigate to="/brands" /> : <AuthForm />}
+          />
+          <Route
+            path="/signup"
+            element={user ? <Navigate to="/brands" /> : <AuthForm signup />}
+          />
+          <Route
+            path="/brands"
+            element={user ? <Brands user={user} /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/admin"
+            element={user ? <AdminPanel /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/profile"
+            element={user ? <ProfilePage user={user} /> : <Navigate to="/login" />}
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </main>
-    </div>
+    </Router>
   );
 }
 
