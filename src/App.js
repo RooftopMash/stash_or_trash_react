@@ -4,11 +4,14 @@ import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWith
 import { getFirestore, collection, getDocs, doc, setDoc, addDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-// Global Firebase variables provided by the environment
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const appId = rawAppId.match(/^c_[a-z0-9]+/)?.[0] || 'default-app-id';
+// Helper function to safely get the global variables provided by the environment.
+const getAppEnvVariables = () => {
+  const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+  const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+  const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+  const appId = rawAppId.match(/^c_[a-z0-9]+/)?.[0] || 'default-app-id';
+  return { firebaseConfig, initialAuthToken, appId };
+};
 
 // Mocking shadcn/ui components with Tailwind CSS for a professional look.
 const Card = ({ children, className }) => (
@@ -159,8 +162,9 @@ const ProfilePage = ({ user }) => (
 
 // FeedbackForm Component
 const FeedbackForm = ({ userId }) => {
-  const db = getFirestore();
-  const storage = getStorage();
+  const { firebaseConfig, initialAuthToken, appId } = getAppEnvVariables();
+  const db = getFirestore(initializeApp(firebaseConfig));
+  const storage = getStorage(initializeApp(firebaseConfig));
   const [feedback, setFeedback] = useState("");
   const [rating, setRating] = useState(null);
   const [mediaFile, setMediaFile] = useState(null);
@@ -341,6 +345,7 @@ function App() {
     let unsubscribeAuth;
 
     try {
+      const { firebaseConfig, initialAuthToken } = getAppEnvVariables();
       const app = initializeApp(firebaseConfig);
       auth = getAuth(app);
       setLogLevel('debug');
