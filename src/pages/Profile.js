@@ -1,4 +1,4 @@
-// src/pages/ProfilePage.jsx
+// src/pages/Profile.js
 import React, { useState, useEffect } from 'react';
 // ADDED getDocs to the import list
 import { db, auth, storage, collection, doc, getDoc, setDoc, updateDoc, ref, uploadBytes, getDownloadURL, onSnapshot, addDoc, query, where, serverTimestamp, appId, getDocs } from '../firebase';
