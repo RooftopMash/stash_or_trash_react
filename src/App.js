@@ -1,10 +1,36 @@
-/* global __firebase_config, __initial_auth_token, __app_id */
 import React, { useState, useRef, useEffect } from "react";
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithCustomToken, signInAnonymously } from "firebase/auth";
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, addDoc, onSnapshot, query, setLogLevel, orderBy, where } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { v4 as uuidv4 } from 'uuid';
+
+setLogLevel('debug');
+
+// Global Firebase variables provided by the environment
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const appId = rawAppId.match(/^c_[a-z0-9]+/)?.[0] || 'default-app-id';
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// A simple utility to sign in if a custom token is available, otherwise anonymously.
+const initializeFirebaseCanvasAuth = async () => {
+  try {
+    if (initialAuthToken) {
+      await signInWithCustomToken(auth, initialAuthToken);
+    } else {
+      await signInAnonymously(auth);
+    }
+    console.log("Firebase authentication successful.");
+  } catch (error) {
+    console.error("Firebase authentication failed:", error);
+  }
+};
 
 // Mocking shadcn/ui components with Tailwind CSS for a professional look.
 const Card = ({ children, className }) => (
@@ -33,41 +59,6 @@ const Input = ({ type, placeholder, value, onChange, className, accept, onChange
     className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
   />
 );
-
-// Global Firebase variables provided by the environment
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const appId = rawAppId.match(/^c_[a-z0-9]+/)?.[0] || 'default-app-id';
-
-// Initialize Firebase services
-let app, auth, db, storage;
-try {
-  if (Object.keys(firebaseConfig).length > 0) {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    storage = getStorage(app);
-  }
-} catch (e) {
-  console.error("Firebase initialization failed:", e);
-}
-
-// A simple utility to sign in if a custom token is available, otherwise anonymously.
-const initializeFirebaseCanvasAuth = async () => {
-  if (!auth) return;
-  try {
-    if (initialAuthToken) {
-      await signInWithCustomToken(auth, initialAuthToken);
-      console.log("Signed in with custom token.");
-    } else {
-      await signInAnonymously(auth);
-      console.log("Signed in anonymously.");
-    }
-  } catch (error) {
-    console.error("Firebase authentication failed:", error);
-  }
-};
 
 const SubmissionForm = ({ userId }) => {
   const [description, setDescription] = useState("");
@@ -171,14 +162,14 @@ const SubmissionForm = ({ userId }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+    <div className="flex flex-col items-center justify-center bg-gray-100 p-4">
       <Card className="w-full max-w-xl">
         <CardContent>
-          <h2 className="text-2xl font-bold mb-4">Stash or Trash</h2>
+          <h2 className="text-2xl font-bold mb-4">What's the verdict?</h2>
           <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
             <textarea
               className="flex w-full min-h-[100px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="Describe what you want to stash or trash..."
+              placeholder="Describe your item to stash or trash..."
               value={description}
               onChange={handleDescriptionChange}
             />
@@ -192,14 +183,14 @@ const SubmissionForm = ({ userId }) => {
                 onClick={() => setRating("Stash")}
                 className={`flex-1 ${rating === "Stash" ? "bg-green-500 hover:bg-green-600 text-white" : "bg-gray-200 text-gray-800 hover:bg-gray-300"}`}
               >
-                💰
+                <span role="img" aria-label="stash">💰</span> Stash
               </Button>
               <Button
                 type="button"
                 onClick={() => setRating("Trash")}
                 className={`flex-1 ${rating === "Trash" ? "bg-red-500 hover:bg-red-600 text-white" : "bg-gray-200 text-gray-800 hover:bg-gray-300"}`}
               >
-                🚮
+                <span role="img" aria-label="trash">🚮</span> Trash
               </Button>
             </div>
 
@@ -212,7 +203,7 @@ const SubmissionForm = ({ userId }) => {
                   className="flex-grow"
                 />
                 <Button type="button" onClick={isCapturing ? stopCapture : startCapture}>
-                  {isCapturing ? "Stop Capture" : "Capture from Camera"}
+                  {isCapturing ? "Stop Capture" : "Camera"}
                 </Button>
               </div>
               {isCapturing && (
@@ -239,7 +230,206 @@ const SubmissionForm = ({ userId }) => {
   );
 };
 
-const ProfilePage = ({ user }) => {
+const StashOrTrashList = ({ userId, authReady }) => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db || !authReady) {
+      setLoading(false);
+      return;
+    }
+    const submissionsCollectionRef = collection(db, "artifacts", appId, "public", "data", "submissions");
+    // Sort items by timestamp on the server to prevent errors and improve performance
+    const q = query(submissionsCollectionRef, orderBy('timestamp', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allItems = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setItems(allItems);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching items:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userId, authReady]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center my-8">
+        <div className="text-xl font-bold text-gray-800">Loading items...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-start p-4 mt-8">
+      {items.length === 0 ? (
+        <div className="p-4 bg-white rounded-lg shadow-md">
+          <p className="text-lg text-gray-600">No items have been submitted yet. Be the first!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl">
+          {items.map((item) => (
+            <Card key={item.id}>
+              <CardContent>
+                <div className="flex justify-between items-center mb-4">
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.rating === 'Stash' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+                    {item.rating === 'Stash' ? 'Stash 💰' : 'Trash 🚮'}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {item.timestamp?.toDate()?.toLocaleDateString() || 'N/A'}
+                  </span>
+                </div>
+                <p className="text-gray-700 mb-4 break-words">{item.description}</p>
+                {item.mediaUrl && (
+                  <div className="mb-4">
+                    {item.mediaUrl.endsWith('.mp4') || item.mediaUrl.endsWith('.webm') ? (
+                      <video
+                        controls
+                        src={item.mediaUrl}
+                        className="w-full rounded-lg"
+                        onError={(e) => console.error("Video failed to load:", e)}
+                      />
+                    ) : (
+                      <img
+                        src={item.mediaUrl}
+                        alt="Submitted media"
+                        className="w-full h-auto rounded-lg"
+                        onError={(e) => e.target.src = 'https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Failed+to+Load'}
+                      />
+                    )}
+                  </div>
+                )}
+                <div className="text-sm text-gray-500">
+                  <p>User ID:</p>
+                  <p className="font-mono break-all">{item.userId}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const UserWall = ({ userId, authReady }) => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db || !userId || !authReady) {
+      setLoading(false);
+      return;
+    }
+    const submissionsCollectionRef = collection(db, "artifacts", appId, "public", "data", "submissions");
+    const q = query(submissionsCollectionRef, where('userId', '==', userId), orderBy('timestamp', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allItems = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setItems(allItems);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching user's items:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userId, authReady]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center my-8">
+        <div className="text-xl font-bold text-gray-800">Loading your submissions...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-start p-4 mt-8 w-full">
+      <h3 className="text-2xl font-bold mb-6 text-gray-800">My Submissions</h3>
+      {items.length === 0 ? (
+        <div className="p-4 bg-white rounded-lg shadow-md w-full max-w-xl text-center">
+          <p className="text-lg text-gray-600">You haven't stashed or trashed anything yet!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl">
+          {items.map((item) => (
+            <Card key={item.id}>
+              <CardContent>
+                <div className="flex justify-between items-center mb-4">
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.rating === 'Stash' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+                    {item.rating === 'Stash' ? 'Stash 💰' : 'Trash 🚮'}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {item.timestamp?.toDate()?.toLocaleDateString() || 'N/A'}
+                  </span>
+                </div>
+                <p className="text-gray-700 mb-4 break-words">{item.description}</p>
+                {item.mediaUrl && (
+                  <div className="mb-4">
+                    {item.mediaUrl.endsWith('.mp4') || item.mediaUrl.endsWith('.webm') ? (
+                      <video
+                        controls
+                        src={item.mediaUrl}
+                        className="w-full rounded-lg"
+                        onError={(e) => console.error("Video failed to load:", e)}
+                      />
+                    ) : (
+                      <img
+                        src={item.mediaUrl}
+                        alt="Submitted media"
+                        className="w-full h-auto rounded-lg"
+                        onError={(e) => e.target.src = 'https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Failed+to+Load'}
+                      />
+                    )}
+                  </div>
+                )}
+                <div className="flex space-x-2 mt-4">
+                  <a
+                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}&summary=${encodeURIComponent(item.description)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 text-center py-2 px-4 rounded-md bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium"
+                  >
+                    Share on LinkedIn
+                  </a>
+                  <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}&quote=${encodeURIComponent(item.description)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 text-center py-2 px-4 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium"
+                  >
+                    Share on Facebook
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const HomePage = ({ user, authReady }) => {
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-gray-100 p-4">
+      <SubmissionForm userId={user?.uid} />
+      <StashOrTrashList userId={user?.uid} authReady={authReady} />
+    </div>
+  );
+};
+
+const ProfilePage = ({ user, authReady }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 rounded-lg shadow-md">
       <Card className="w-full max-w-xl">
@@ -256,24 +446,26 @@ const ProfilePage = ({ user }) => {
           )}
         </CardContent>
       </Card>
+      {user && <UserWall userId={user.uid} authReady={authReady} />}
     </div>
   );
 };
 
 const App = () => {
   const [user, setUser] = useState(null);
-  const [currentPage, setCurrentPage] = useState("form");
+  const [currentPage, setCurrentPage] = useState("home");
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    if (auth) {
-      const unsubscribe = auth.onAuthStateChanged(currentUser => {
-        setUser(currentUser);
-        setAuthReady(true);
-      });
-      initializeFirebaseCanvasAuth();
-      return () => unsubscribe();
-    }
+    const initialize = async () => {
+        await initializeFirebaseCanvasAuth();
+        const unsubscribe = onAuthStateChanged(auth, currentUser => {
+            setUser(currentUser);
+            setAuthReady(true);
+        });
+        return () => unsubscribe();
+    };
+    initialize();
   }, []);
 
   if (!authReady) {
@@ -290,10 +482,10 @@ const App = () => {
         <h1 className="text-xl font-bold">Stash or Trash</h1>
         <div className="space-x-4">
           <Button
-            onClick={() => setCurrentPage("form")}
-            className={`${currentPage === "form" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-600 hover:bg-gray-700 text-gray-300"}`}
+            onClick={() => setCurrentPage("home")}
+            className={`${currentPage === "home" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-600 hover:bg-gray-700 text-gray-300"}`}
           >
-            Submit
+            Home
           </Button>
           <Button
             onClick={() => setCurrentPage("profile")}
@@ -303,7 +495,8 @@ const App = () => {
           </Button>
         </div>
       </div>
-      {currentPage === "form" ? <SubmissionForm userId={user?.uid} /> : <ProfilePage user={user} />}
+      {currentPage === "home" && <HomePage user={user} authReady={authReady} />}
+      {currentPage === "profile" && <ProfilePage user={user} authReady={authReady} />}
     </div>
   );
 };
