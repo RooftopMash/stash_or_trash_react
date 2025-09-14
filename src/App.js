@@ -8,24 +8,25 @@ import {
   onSnapshot,
   query,
   setLogLevel,
-  where,
   serverTimestamp,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-// Using dummy imports and variables to make the code runnable in this environment
-const i18n = { changeLanguage: () => console.log('Language changed') };
-const countryLanguageMap = {
-    AF: "ps", AX: "sv", AL: "sq", DZ: "ar", AS: "sm", AD: "ca", AO: "pt", AI: "en", AQ: "en", AG: "en", AR: "es", AM: "hy", AW: "nl", AU: "en", AT: "de", AZ: "az", BS: "en", BH: "ar", BD: "bn", BB: "en", BY: "be", BE: "nl", BZ: "es", BJ: "fr", BM: "en", BT: "dz", BO: "es", BQ: "nl", BA: "bs", BW: "tn", BV: "no", BR: "pt", IO: "en", BN: "ms", BG: "bg", BF: "fr", BI: "rn", KH: "km", CM: "fr", CA: "fr", CV: "pt", KY: "en", CF: "fr", TD: "fr", CL: "es", CN: "zh", CX: "en", CC: "ms", CO: "es", KM: "ar", CG: "fr", CD: "fr", CK: "rar", CR: "es", CI: "fr", HR: "hr", CU: "es", CW: "nl", CY: "el", CZ: "cs", DK: "da", DJ: "aa", DM: "en", DO: "es", EC: "es", EG: "ar", SV: "es", GQ: "es", ER: "ti", EE: "et", ET: "am", FK: "en", FO: "fo", FJ: "fj", FI: "fi", FR: "fr", GF: "fr", PF: "fr", TF: "fr", GA: "fr", GM: "wo", GE: "ka", DE: "de", GH: "ak", GI: "en", GR: "el", GL: "kl", GD: "en", GP: "fr", GU: "ch", GT: "es", GG: "en", GN: "fr", GW: "pt", GY: "gu", HT: "ht", HM: "en", VA: "it", HN: "es", HK: "zh", HU: "hu", IS: "is", IN: "hi", ID: "id", IR: "fa", IQ: "ar", IE: "ga", IM: "gv", IL: "he", IT: "it", JM: "jam", JP: "ja", JE: "en", JO: "ar", KZ: "kk", KE: "sw", KI: "gil", KP: "ko", KR: "ko", KW: "ar", KG: "ky", LA: "lo", LV: "lv", LB: "ar", LS: "st", LR: "kpe", LY: "ar", LI: "de", LT: "lt", LU: "lb", MO: "zh", MG: "mg", MW: "ny", MY: "ms", MV: "dv", ML: "bm", MT: "mt", MH: "mh", MQ: "fr", MR: "ar", MU: "mfe", MZ: "pt", MM: "my", NA: "na", NP: "ne", NL: "nl", NC: "fr", NZ: "mi", NI: "es", NE: "fr", NG: "yo", NU: "niu", NF: "en", MK: "mk", MP: "ch", NO: "no", OM: "ar", PK: "ur", PW: "pau", PS: "ar", PA: "es", PG: "tpi", PY: "gn", PE: "es", PH: "tl", PN: "en", PL: "pl", PT: "pt", PR: "es", QA: "ar", RE: "fr", RO: "ro", RU: "ru", RW: "rw", BL: "fr", SH: "en", KN: "kea", LC: "kwy", MF: "fr", PM: "fr", VC: "srl", WS: "sm", SM: "it", ST: "pt", SA: "ar", SN: "wo", RS: "sr", SC: "crs", SL: "men", SG: "zh", SX: "nl", SK: "sk", SI: "sl", SB: "pis", SO: "so", ZA: "zu", ES: "es", LK: "si", SD: "ar", SR: "nl", SJ: "no", SZ: "ss", SE: "sv", CH: "de", SY: "ar", TW: "zh", TJ: "tg", TZ: "sw", TH: "th", TL: "tet", TG: "fr", TK: "tkl", TO: "to", TT: "en", TN: "ar", TR: "tr", TM: "tk", TC: "en", TV: "tvl", UG: "lg", UA: "uk", AE: "ar", GB: "cy", US: "es", UM: "en", UY: "es", UZ: "uz", VU: "bi", VE: "es", VN: "vi", VG: "en", VI: "en", WF: "fr", EH: "ar", YE: "ar", ZM: "bem", ZW: "sn",
-};
-const __app_id = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const FIREBASE_CONFIG = JSON.parse(
-  typeof __firebase_config !== 'undefined' ? __firebase_config : '{}'
-);
-
+// Set debug logging for Firebase
 setLogLevel('debug');
 
-// UI components (mocked shadcn/ui with Tailwind)
+// 1. Use environment variables instead of undefined globals
+const FIREBASE_CONFIG = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : "{}");
+const INITIAL_AUTH_TOKEN = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+const APP_ID = typeof __app_id !== 'undefined' ? __app_id : "default-app-id";
+
+// 2. Initialize Firebase
+const app = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// Mocked UI components with Tailwind CSS for single file
 const Card = ({ children, className }) => (
   <div className={`rounded-xl border bg-white text-gray-900 shadow ${className || ""}`}>{children}</div>
 );
@@ -65,7 +66,7 @@ const Input = ({
   />
 );
 
-const SubmissionForm = ({ userId, db, storage }) => {
+const SubmissionForm = ({ user }) => {
   const [description, setDescription] = useState("");
   const [rating, setRating] = useState(null);
   const [mediaFile, setMediaFile] = useState(null);
@@ -148,7 +149,7 @@ const SubmissionForm = ({ userId, db, storage }) => {
     try {
       if (mediaFile) {
         const fileName = mediaFile.name || `media_${Date.now()}.webm`;
-        const storageRef = ref(storage, `stash-or-trash/${userId}/${fileName}`);
+        const storageRef = ref(storage, `stash-or-trash/${user?.uid}/${fileName}`);
         const uploadTask = await uploadBytes(storageRef, mediaFile);
         mediaUrl = await getDownloadURL(uploadTask.ref);
         console.log("Media uploaded successfully:", mediaUrl);
@@ -156,13 +157,13 @@ const SubmissionForm = ({ userId, db, storage }) => {
       const submissionCollectionRef = collection(
         db,
         "artifacts",
-        __app_id,
+        APP_ID,
         "public",
         "data",
         "submissions"
       );
       await addDoc(submissionCollectionRef, {
-        userId: userId,
+        userId: user?.uid,
         description: description,
         rating: rating,
         mediaUrl: mediaUrl,
@@ -260,7 +261,7 @@ const SubmissionForm = ({ userId, db, storage }) => {
   );
 };
 
-const StashOrTrashList = ({ user, authReady, db }) => {
+const StashOrTrashList = ({ authReady }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -272,12 +273,11 @@ const StashOrTrashList = ({ user, authReady, db }) => {
     const submissionsCollectionRef = collection(
       db,
       "artifacts",
-      __app_id,
+      APP_ID,
       "public",
       "data",
       "submissions"
     );
-    // Removed orderBy to avoid the need for an index, sorting client-side instead.
     const q = query(submissionsCollectionRef);
 
     const unsubscribe = onSnapshot(
@@ -287,7 +287,6 @@ const StashOrTrashList = ({ user, authReady, db }) => {
           id: doc.id,
           ...doc.data(),
         }));
-        // Sort items by timestamp client-side
         allItems.sort((a, b) => (b.timestamp?.toDate()?.getTime() || 0) - (a.timestamp?.toDate()?.getTime() || 0));
         setItems(allItems);
         setLoading(false);
@@ -299,7 +298,7 @@ const StashOrTrashList = ({ user, authReady, db }) => {
     );
 
     return () => unsubscribe();
-  }, [authReady, db]);
+  }, [authReady]);
 
   if (loading) {
     return (
@@ -377,7 +376,7 @@ const StashOrTrashList = ({ user, authReady, db }) => {
   );
 };
 
-const UserWall = ({ user, authReady, db }) => {
+const UserWall = ({ user, authReady }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -389,12 +388,11 @@ const UserWall = ({ user, authReady, db }) => {
     const submissionsCollectionRef = collection(
       db,
       "artifacts",
-      __app_id,
+      APP_ID,
       "public",
       "data",
       "submissions"
     );
-    // Removed all query constraints to fetch all data.
     const q = query(submissionsCollectionRef);
 
     const unsubscribe = onSnapshot(
@@ -404,7 +402,6 @@ const UserWall = ({ user, authReady, db }) => {
           id: doc.id,
           ...doc.data(),
         }));
-        // Filter and sort items by timestamp client-side
         const userItems = allItems
           .filter(item => item.userId === user.uid)
           .sort((a, b) => (b.timestamp?.toDate()?.getTime() || 0) - (a.timestamp?.toDate()?.getTime() || 0));
@@ -419,7 +416,7 @@ const UserWall = ({ user, authReady, db }) => {
     );
 
     return () => unsubscribe();
-  }, [user, authReady, db]);
+  }, [user, authReady]);
 
   if (loading) {
     return (
@@ -518,15 +515,14 @@ const UserWall = ({ user, authReady, db }) => {
   );
 };
 
-const HomePage = ({ user, authReady, db, storage }) => {
+const HomePage = ({ user, authReady }) => {
   const [activeTab, setActiveTab] = useState("all");
   return (
     <div className="bg-gray-100 min-h-screen">
       <header className="bg-white shadow-md p-4 sticky top-0 z-10">
         <nav className="flex justify-between items-center w-full max-w-7xl mx-auto">
           <div className="flex items-center space-x-2">
-            {/* Replace the src with your actual raw GitHub logo URL */}
-            <img src="https://raw.githubusercontent.com/{user}/{repo}/{branch}/src/assets/app-logo.png" alt="Stash or Trash Logo" className="w-12 h-12" />
+            <h1 className="text-2xl font-bold">Stash or Trash</h1>
           </div>
           <div className="flex items-center space-x-4">
             <Button
@@ -554,68 +550,49 @@ const HomePage = ({ user, authReady, db, storage }) => {
       </header>
       <main className="w-full max-w-7xl mx-auto p-4">
         {activeTab === "all" ? (
-          <StashOrTrashList user={user} authReady={authReady} db={db} />
+          <StashOrTrashList authReady={authReady} />
         ) : (
-          <UserWall user={user} authReady={authReady} db={db} />
+          <UserWall user={user} authReady={authReady} />
         )}
       </main>
       <footer className="bg-white shadow-inner p-6 mt-8">
-        <SubmissionForm userId={user?.uid} db={db} storage={storage} />
+        <SubmissionForm user={user} />
       </footer>
     </div>
   );
 };
 
 const App = () => {
-  const [firebaseServices, setFirebaseServices] = useState({
-    app: null,
-    db: null,
-    auth: null,
-    storage: null,
-  });
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    try {
-      if (
-        !firebaseServices.app &&
-        FIREBASE_CONFIG &&
-        Object.keys(FIREBASE_CONFIG).length > 0
-      ) {
-        const app = initializeApp(FIREBASE_CONFIG);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
-
-        setFirebaseServices({ app, auth, db, storage });
-
-        onAuthStateChanged(auth, async (currentUser) => {
-          if (currentUser) {
-            setUser(currentUser);
-            console.log("User signed in with UID:", currentUser.uid);
+    let unsubscribe = () => {};
+    if (db && auth) {
+      const initializeAuth = async () => {
+        try {
+          if (INITIAL_AUTH_TOKEN) {
+            await signInWithCustomToken(auth, INITIAL_AUTH_TOKEN);
           } else {
-            console.log("No user signed in. Attempting to sign in with custom token or anonymously...");
-            try {
-              if (typeof __initial_auth_token !== 'undefined') {
-                await signInWithCustomToken(auth, __initial_auth_token);
-              } else {
-                await signInAnonymously(auth);
-              }
-            } catch (error) {
-              console.error("Authentication failed:", error);
-            }
+            await signInAnonymously(auth);
           }
+          console.log("Firebase authentication successful.");
+        } catch (error) {
+          console.error("Firebase authentication failed:", error);
+        }
+      };
+      initializeAuth().then(() => {
+        unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          setUser(currentUser);
           setAuthReady(true);
         });
-      } else if (!FIREBASE_CONFIG || Object.keys(FIREBASE_CONFIG).length === 0) {
-        console.error("Error initializing Firebase: firebaseConfig is missing.");
-        setAuthReady(true);
-      }
-    } catch (error) {
-      console.error("Error initializing Firebase:", error);
+      });
     }
-  }, [firebaseServices.app]);
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   return (
     <div className="font-sans antialiased text-gray-900 bg-gray-100">
@@ -624,12 +601,10 @@ const App = () => {
       `}</style>
       <script src="https://cdn.tailwindcss.com"></script>
       <script src="https://unpkg.com/lucide-react@0.320.0"></script>
-      {authReady && firebaseServices.db ? (
+      {authReady && user ? (
         <HomePage
           user={user}
           authReady={authReady}
-          db={firebaseServices.db}
-          storage={firebaseServices.storage}
         />
       ) : (
         <div className="flex items-center justify-center min-h-screen">
