@@ -7,26 +7,30 @@ import {
   addDoc,
   onSnapshot,
   query,
-  setLogLevel,
   where,
   serverTimestamp,
+  setLogLevel,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 setLogLevel('debug');
 
-// Global variables provided by the Canvas environment for authentication
+// Define global variables to be safe in environments where they are not provided
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // Initialize Firebase services
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+const app = firebaseConfig ? initializeApp(firebaseConfig) : null;
+const auth = app ? getAuth(app) : null;
+const db = app ? getFirestore(app) : null;
+const storage = app ? getStorage(app) : null;
 
 const initializeFirebaseCanvasAuth = async () => {
+  if (!auth) {
+    console.error("Firebase Auth is not initialized.");
+    return;
+  }
   try {
     if (initialAuthToken) {
       await signInWithCustomToken(auth, initialAuthToken);
@@ -41,7 +45,7 @@ const initializeFirebaseCanvasAuth = async () => {
 
 // UI components (mocked shadcn/ui with Tailwind)
 const Card = ({ children, className }) => (
-  <div className={`rounded-xl border bg-white text-gray-900 shadow ${className || ""}`}>{children}</div>
+  <div className={`rounded-xl border bg-white text-gray-900 shadow-lg ${className || ""}`}>{children}</div>
 );
 const CardContent = ({ children }) => <div className="p-6">{children}</div>;
 const Button = ({
@@ -55,7 +59,7 @@ const Button = ({
     type={type}
     onClick={onClick}
     disabled={disabled}
-    className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 py-2 px-4 ${className || ""}`}
+    className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 py-2 px-4 ${className || ""}`}
   >
     {children}
   </button>
@@ -81,10 +85,7 @@ const Input = ({
 
 // In-file translation data for simplicity and single-file mandate
 const countryLanguageMap = {
-  'US': 'en',
-  'GB': 'en',
-  'FR': 'fr',
-  'ES': 'es',
+  'US': 'en', 'GB': 'en', 'FR': 'fr', 'ES': 'es', 'DE': 'de', 'IT': 'it', 'JP': 'ja', 'KR': 'ko',
 };
 
 const translations = {
@@ -116,13 +117,15 @@ const translations = {
     shareOnLinkedin: "Share on LinkedIn",
     shareOnFacebook: "Share on Facebook",
     allSubmissions: "All Submissions",
+    camera: "Camera",
+    stopCapture: "Stop Capture",
   },
   'fr': {
     welcome: "Bienvenue sur Stash or Trash !",
     submit: "Soumettre",
     stash: "Stocker",
     trash: "Jeter",
-    whatsTheVerdict: "Quel est le verdict ?",
+    whatsTheVerdict: "Quel est le verdet ?",
     describeItem: "Décrivez votre objet à stocker ou à jeter...",
     descriptionRequired: "Une description est requise.",
     selectRating: "Veuillez sélectionner Stocker ou Jeter.",
@@ -145,6 +148,8 @@ const translations = {
     shareOnLinkedin: "Partager sur LinkedIn",
     shareOnFacebook: "Partager sur Facebook",
     allSubmissions: "Toutes les soumissions",
+    camera: "Caméra",
+    stopCapture: "Arrêter la capture",
   },
   'es': {
     welcome: "¡Bienvenido a Stash or Trash!",
@@ -174,6 +179,132 @@ const translations = {
     shareOnLinkedin: "Compartir en LinkedIn",
     shareOnFacebook: "Compartir en Facebook",
     allSubmissions: "Todos los envíos",
+    camera: "Cámara",
+    stopCapture: "Detener la captura",
+  },
+  'de': {
+    welcome: "Willkommen bei Stash or Trash!",
+    submit: "Senden",
+    stash: "Stash",
+    trash: "Müll",
+    whatsTheVerdict: "Was ist das Urteil?",
+    describeItem: "Beschreiben Sie Ihren Artikel zum Verstauen oder Wegwerfen...",
+    descriptionRequired: "Eine Beschreibung ist erforderlich.",
+    selectRating: "Bitte wählen Sie Stash oder Müll.",
+    firebaseNotAvailable: "Firebase-Dienste nicht verfügbar.",
+    submissionSuccessful: "Einreichung erfolgreich!",
+    errorSubmitting: "Fehler beim Senden des Artikels. Bitte versuchen Sie es erneut.",
+    submitting: "Senden...",
+    mySubmissions: "Meine Einreichungen",
+    youHaveNotSubmitted: "Sie haben noch nichts eingereicht!",
+    loading: "Laden...",
+    home: "Startseite",
+    profile: "Profil",
+    userProfile: "Benutzerprofil",
+    userDetails: "Benutzerdetails:",
+    userId: "Benutzer-ID:",
+    email: "E-Mail:",
+    isAnonymous: "Ist anonym:",
+    loadingItems: "Laden von Elementen...",
+    noItemsSubmitted: "Noch keine Elemente eingereicht. Seien Sie der Erste!",
+    shareOnLinkedin: "Auf LinkedIn teilen",
+    shareOnFacebook: "Auf Facebook teilen",
+    allSubmissions: "Alle Einreichungen",
+    camera: "Kamera",
+    stopCapture: "Aufnahme stoppen",
+  },
+  'it': {
+    welcome: "Benvenuto in Stash or Trash!",
+    submit: "Invia",
+    stash: "Stash",
+    trash: "Cestino",
+    whatsTheVerdict: "Qual è il verdetto?",
+    describeItem: "Descrivi il tuo articolo da nascondere o da buttare...",
+    descriptionRequired: "È richiesta una descrizione.",
+    selectRating: "Seleziona Stash o Cestino.",
+    firebaseNotAvailable: "Servizi Firebase non disponibili.",
+    submissionSuccessful: "Invio riuscito!",
+    errorSubmitting: "Errore durante l'invio. Riprova.",
+    submitting: "Invio in corso...",
+    mySubmissions: "Le mie invii",
+    youHaveNotSubmitted: "Non hai ancora inviato nulla!",
+    loading: "Caricamento...",
+    home: "Home",
+    profile: "Profilo",
+    userProfile: "Profilo utente",
+    userDetails: "Dettagli utente:",
+    userId: "ID utente:",
+    email: "Email:",
+    isAnonymous: "È anonimo:",
+    loadingItems: "Caricamento elementi...",
+    noItemsSubmitted: "Ancora nessun elemento inviato. Sii il primo!",
+    shareOnLinkedin: "Condividi su LinkedIn",
+    shareOnFacebook: "Condividi su Facebook",
+    allSubmissions: "Tutti gli invii",
+    camera: "Telecamera",
+    stopCapture: "Ferma acquisizione",
+  },
+  'ja': {
+    welcome: "スタッシュ・オア・トラッシュへようこそ！",
+    submit: "送信",
+    stash: "スタッシュ",
+    trash: "トラッシュ",
+    whatsTheVerdict: "評決は？",
+    describeItem: "スタッシュまたはトラッシュするアイテムを説明してください...",
+    descriptionRequired: "説明が必要です。",
+    selectRating: "スタッシュまたはトラッシュを選択してください。",
+    firebaseNotAvailable: "Firebaseサービスは利用できません。",
+    submissionSuccessful: "送信成功！",
+    errorSubmitting: "アイテムの送信中にエラーが発生しました。もう一度お試しください。",
+    submitting: "送信中...",
+    mySubmissions: "マイ送信",
+    youHaveNotSubmitted: "まだ何も送信していません！",
+    loading: "読み込み中...",
+    home: "ホーム",
+    profile: "プロフィール",
+    userProfile: "ユーザープロフィール",
+    userDetails: "ユーザー詳細:",
+    userId: "ユーザーID:",
+    email: "メールアドレス:",
+    isAnonymous: "匿名:",
+    loadingItems: "アイテムを読み込み中...",
+    noItemsSubmitted: "まだアイテムが送信されていません。最初になりましょう！",
+    shareOnLinkedin: "LinkedInで共有",
+    shareOnFacebook: "Facebookで共有",
+    allSubmissions: "全ての送信",
+    camera: "カメラ",
+    stopCapture: "キャプチャを停止",
+  },
+  'ko': {
+    welcome: "스태시 오어 트래시에 오신 것을 환영합니다!",
+    submit: "제출",
+    stash: "보관",
+    trash: "버리기",
+    whatsTheVerdict: "판결은?",
+    describeItem: "보관하거나 버릴 아이템을 설명하세요...",
+    descriptionRequired: "설명이 필요합니다.",
+    selectRating: "보관 또는 버리기를 선택해주세요.",
+    firebaseNotAvailable: "Firebase 서비스를 사용할 수 없습니다.",
+    submissionSuccessful: "제출 성공!",
+    errorSubmitting: "아이템 제출 중 오류가 발생했습니다. 다시 시도해주세요.",
+    submitting: "제출 중...",
+    mySubmissions: "내 제출",
+    youHaveNotSubmitted: "아직 아무것도 제출하지 않았습니다!",
+    loading: "로딩 중...",
+    home: "홈",
+    profile: "프로필",
+    userProfile: "사용자 프로필",
+    userDetails: "사용자 상세 정보:",
+    userId: "사용자 ID:",
+    email: "이메일:",
+    isAnonymous: "익명:",
+    loadingItems: "아이템 로딩 중...",
+    noItemsSubmitted: "아직 제출된 아이템이 없습니다. 처음으로 제출해 보세요!",
+    shareOnLinkedin: "링크드인에 공유",
+    onFacebook: "페이스북에 공유",
+    allSubmissions: "모든 제출",
+    camera: "카메라",
+    stopCapture: "캡처 중지",
   },
 };
 
@@ -347,7 +478,7 @@ const SubmissionForm = ({ userId, t }) => {
                   className="flex-grow"
                 />
                 <Button type="button" onClick={isCapturing ? stopCapture : startCapture}>
-                  {isCapturing ? "Stop Capture" : "Camera"}
+                  {isCapturing ? t('stopCapture') : t('camera')}
                 </Button>
               </div>
               {isCapturing && (
@@ -391,7 +522,6 @@ const StashOrTrashList = ({ t, authReady }) => {
       "data",
       "submissions"
     );
-    // Note: Removed orderBy("timestamp", "desc") to avoid required index errors.
     const q = query(submissionsCollectionRef);
 
     const unsubscribe = onSnapshot(
@@ -400,7 +530,7 @@ const StashOrTrashList = ({ t, authReady }) => {
         const allItems = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        })).sort((a, b) => (b.timestamp?.toDate()?.getTime() || 0) - (a.timestamp?.toDate()?.getTime() || 0)); // Sorting in-memory instead
+        })).sort((a, b) => (b.timestamp?.toDate()?.getTime() || 0) - (a.timestamp?.toDate()?.getTime() || 0));
         setItems(allItems);
         setLoading(false);
       },
@@ -506,7 +636,6 @@ const UserWall = ({ userId, authReady, t }) => {
       "data",
       "submissions"
     );
-    // Note: Removed orderBy("timestamp", "desc") to avoid required index errors.
     const q = query(
       submissionsCollectionRef,
       where("userId", "==", userId)
@@ -518,7 +647,7 @@ const UserWall = ({ userId, authReady, t }) => {
         const allItems = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        })).sort((a, b) => (b.timestamp?.toDate()?.getTime() || 0) - (a.timestamp?.toDate()?.getTime() || 0)); // Sorting in-memory instead
+        })).sort((a, b) => (b.timestamp?.toDate()?.getTime() || 0) - (a.timestamp?.toDate()?.getTime() || 0));
         setItems(allItems);
         setLoading(false);
       },
@@ -665,20 +794,20 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [currentPage, setCurrentPage] = useState("home");
   const [authReady, setAuthReady] = useState(false);
-  const [language, setLanguage] = useState(
-    localStorage.getItem("appLanguage") || "en"
-  );
+  const [language, setLanguage] = useState("en");
 
   const t = (key) => translations[language][key] || key;
 
   // Language detection useEffect
   useEffect(() => {
     // Only run if a language is not already stored
-    if (!localStorage.getItem("appLanguage")) {
+    const storedLang = localStorage.getItem("appLanguage");
+    if (storedLang) {
+      setLanguage(storedLang);
+    } else {
       const languageFromBrowser = navigator.language;
       const countryCode = languageFromBrowser.split('-')[1]?.toUpperCase();
       const mappedLanguage = countryLanguageMap[countryCode] || 'en';
-
       setLanguage(mappedLanguage);
       localStorage.setItem("appLanguage", mappedLanguage);
     }
@@ -686,12 +815,17 @@ const App = () => {
 
   useEffect(() => {
     let unsubscribe = () => {};
-    initializeFirebaseCanvasAuth().then(() => {
-      unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
-        setAuthReady(true);
+    if (auth) {
+      initializeFirebaseCanvasAuth().then(() => {
+        unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          setUser(currentUser);
+          setAuthReady(true);
+        });
       });
-    });
+    } else {
+      setAuthReady(true); // Treat as ready if auth is not available
+    }
+
     return () => {
       if (unsubscribe) unsubscribe();
     };
