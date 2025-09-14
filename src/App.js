@@ -16,18 +16,13 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 setLogLevel('debug');
 
-// Environment variables, fallback to empty/defaults if missing
-const firebaseConfig =
-  typeof __firebase_config !== "undefined" && __firebase_config
-    ? JSON.parse(__firebase_config)
-    : {};
-const initialAuthToken =
-  typeof __initial_auth_token !== "undefined" ? __initial_auth_token : null;
-const rawAppId =
-  typeof __app_id !== "undefined" ? __app_id : "default-app-id";
+// 1. Use environment variables instead of undefined globals
+const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG || "{}");
+const initialAuthToken = process.env.REACT_APP_INITIAL_AUTH_TOKEN || null;
+const rawAppId = process.env.REACT_APP_APP_ID || "default-app-id";
 const appId = rawAppId.match(/^c_[a-z0-9]+/)?.[0] || "default-app-id";
 
-// Initialize Firebase
+// 2. Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -128,7 +123,6 @@ const SubmissionForm = ({ userId }) => {
       mediaRecorderRef.current.onstop = () => {
         // Create a blob and generate a filename
         const blob = new Blob(chunksRef.current, { type: "video/webm" });
-        // Generate a filename for the blob (since Blob doesn't have .name)
         blob.name = `capture_${Date.now()}.webm`;
         setMediaFile(blob);
         chunksRef.current = [];
@@ -172,16 +166,12 @@ const SubmissionForm = ({ userId }) => {
 
     try {
       if (mediaFile) {
-        // Use .name if present (File), otherwise generate from blob
         const fileName = mediaFile.name || `media_${Date.now()}.webm`;
         const storageRef = ref(storage, `stash-or-trash/${userId}/${fileName}`);
         const uploadTask = await uploadBytes(storageRef, mediaFile);
         mediaUrl = await getDownloadURL(uploadTask.ref);
         console.log("Media uploaded successfully:", mediaUrl);
       }
-
-      // Firestore path: collection/doc/collection/doc/collection
-      // "artifacts" (collection), appId (doc), "public" (collection), "data" (doc), "submissions" (collection)
       const submissionCollectionRef = collection(
         db,
         "artifacts",
@@ -195,7 +185,7 @@ const SubmissionForm = ({ userId }) => {
         description: description,
         rating: rating,
         mediaUrl: mediaUrl,
-        timestamp: serverTimestamp(), // Correct Firestore timestamp
+        timestamp: serverTimestamp(),
       });
 
       console.log("Submission successful!");
@@ -291,7 +281,6 @@ const SubmissionForm = ({ userId }) => {
   );
 };
 
-// StashOrTrashList component
 const StashOrTrashList = ({ userId, authReady }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -406,7 +395,6 @@ const StashOrTrashList = ({ userId, authReady }) => {
   );
 };
 
-// UserWall component
 const UserWall = ({ userId, authReady }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -546,7 +534,6 @@ const UserWall = ({ userId, authReady }) => {
   );
 };
 
-// HomePage and ProfilePage
 const HomePage = ({ user, authReady }) => (
   <div className="flex flex-col items-center min-h-screen bg-gray-100 p-4">
     <SubmissionForm userId={user?.uid} />
@@ -580,7 +567,6 @@ const ProfilePage = ({ user, authReady }) => (
   </div>
 );
 
-// Main App component
 const App = () => {
   const [user, setUser] = useState(null);
   const [currentPage, setCurrentPage] = useState("home");
@@ -597,7 +583,6 @@ const App = () => {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-    // eslint-disable-next-line
   }, []);
 
   if (!authReady) {
