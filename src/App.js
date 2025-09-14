@@ -15,13 +15,31 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 // Set debug logging for Firebase
 setLogLevel('debug');
 
-// 1. Use environment variables instead of undefined globals
-const FIREBASE_CONFIG = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : "{}");
-const INITIAL_AUTH_TOKEN = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-const APP_ID = typeof __app_id !== 'undefined' ? __app_id : "default-app-id";
+// 1. Use try/catch blocks to safely access environment variables
+let firebaseConfig = {};
+let initialAuthToken = null;
+let appId = "default-app-id";
+
+try {
+  firebaseConfig = JSON.parse(__firebase_config);
+} catch (e) {
+  console.error("Firebase config not available.", e);
+}
+
+try {
+  initialAuthToken = __initial_auth_token;
+} catch (e) {
+  console.error("Auth token not available.", e);
+}
+
+try {
+  appId = __app_id;
+} catch (e) {
+  console.error("App ID not available.", e);
+}
 
 // 2. Initialize Firebase
-const app = initializeApp(FIREBASE_CONFIG);
+const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -157,7 +175,7 @@ const SubmissionForm = ({ user }) => {
       const submissionCollectionRef = collection(
         db,
         "artifacts",
-        APP_ID,
+        appId,
         "public",
         "data",
         "submissions"
@@ -273,7 +291,7 @@ const StashOrTrashList = ({ authReady }) => {
     const submissionsCollectionRef = collection(
       db,
       "artifacts",
-      APP_ID,
+      appId,
       "public",
       "data",
       "submissions"
@@ -388,7 +406,7 @@ const UserWall = ({ user, authReady }) => {
     const submissionsCollectionRef = collection(
       db,
       "artifacts",
-      APP_ID,
+      appId,
       "public",
       "data",
       "submissions"
@@ -571,8 +589,8 @@ const App = () => {
     if (db && auth) {
       const initializeAuth = async () => {
         try {
-          if (INITIAL_AUTH_TOKEN) {
-            await signInWithCustomToken(auth, INITIAL_AUTH_TOKEN);
+          if (initialAuthToken) {
+            await signInWithCustomToken(auth, initialAuthToken);
           } else {
             await signInAnonymously(auth);
           }
