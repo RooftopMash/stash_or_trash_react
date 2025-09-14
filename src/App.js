@@ -8,7 +8,6 @@ import {
   onSnapshot,
   query,
   setLogLevel,
-  orderBy,
   where,
   serverTimestamp,
 } from "firebase/firestore";
@@ -20,7 +19,6 @@ const countryLanguageMap = {
     AF: "ps", AX: "sv", AL: "sq", DZ: "ar", AS: "sm", AD: "ca", AO: "pt", AI: "en", AQ: "en", AG: "en", AR: "es", AM: "hy", AW: "nl", AU: "en", AT: "de", AZ: "az", BS: "en", BH: "ar", BD: "bn", BB: "en", BY: "be", BE: "nl", BZ: "es", BJ: "fr", BM: "en", BT: "dz", BO: "es", BQ: "nl", BA: "bs", BW: "tn", BV: "no", BR: "pt", IO: "en", BN: "ms", BG: "bg", BF: "fr", BI: "rn", KH: "km", CM: "fr", CA: "fr", CV: "pt", KY: "en", CF: "fr", TD: "fr", CL: "es", CN: "zh", CX: "en", CC: "ms", CO: "es", KM: "ar", CG: "fr", CD: "fr", CK: "rar", CR: "es", CI: "fr", HR: "hr", CU: "es", CW: "nl", CY: "el", CZ: "cs", DK: "da", DJ: "aa", DM: "en", DO: "es", EC: "es", EG: "ar", SV: "es", GQ: "es", ER: "ti", EE: "et", ET: "am", FK: "en", FO: "fo", FJ: "fj", FI: "fi", FR: "fr", GF: "fr", PF: "fr", TF: "fr", GA: "fr", GM: "wo", GE: "ka", DE: "de", GH: "ak", GI: "en", GR: "el", GL: "kl", GD: "en", GP: "fr", GU: "ch", GT: "es", GG: "en", GN: "fr", GW: "pt", GY: "gu", HT: "ht", HM: "en", VA: "it", HN: "es", HK: "zh", HU: "hu", IS: "is", IN: "hi", ID: "id", IR: "fa", IQ: "ar", IE: "ga", IM: "gv", IL: "he", IT: "it", JM: "jam", JP: "ja", JE: "en", JO: "ar", KZ: "kk", KE: "sw", KI: "gil", KP: "ko", KR: "ko", KW: "ar", KG: "ky", LA: "lo", LV: "lv", LB: "ar", LS: "st", LR: "kpe", LY: "ar", LI: "de", LT: "lt", LU: "lb", MO: "zh", MG: "mg", MW: "ny", MY: "ms", MV: "dv", ML: "bm", MT: "mt", MH: "mh", MQ: "fr", MR: "ar", MU: "mfe", MZ: "pt", MM: "my", NA: "na", NP: "ne", NL: "nl", NC: "fr", NZ: "mi", NI: "es", NE: "fr", NG: "yo", NU: "niu", NF: "en", MK: "mk", MP: "ch", NO: "no", OM: "ar", PK: "ur", PW: "pau", PS: "ar", PA: "es", PG: "tpi", PY: "gn", PE: "es", PH: "tl", PN: "en", PL: "pl", PT: "pt", PR: "es", QA: "ar", RE: "fr", RO: "ro", RU: "ru", RW: "rw", BL: "fr", SH: "en", KN: "kea", LC: "kwy", MF: "fr", PM: "fr", VC: "srl", WS: "sm", SM: "it", ST: "pt", SA: "ar", SN: "wo", RS: "sr", SC: "crs", SL: "men", SG: "zh", SX: "nl", SK: "sk", SI: "sl", SB: "pis", SO: "so", ZA: "zu", ES: "es", LK: "si", SD: "ar", SR: "nl", SJ: "no", SZ: "ss", SE: "sv", CH: "de", SY: "ar", TW: "zh", TJ: "tg", TZ: "sw", TH: "th", TL: "tet", TG: "fr", TK: "tkl", TO: "to", TT: "en", TN: "ar", TR: "tr", TM: "tk", TC: "en", TV: "tvl", UG: "lg", UA: "uk", AE: "ar", GB: "cy", US: "es", UM: "en", UY: "es", UZ: "uz", VU: "bi", VE: "es", VN: "vi", VG: "en", VI: "en", WF: "fr", EH: "ar", YE: "ar", ZM: "bem", ZW: "sn",
 };
 const __app_id = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-// Replace the empty object with your actual firebaseConfig object
 const FIREBASE_CONFIG = JSON.parse(
   typeof __firebase_config !== 'undefined' ? __firebase_config : '{}'
 );
@@ -267,7 +265,7 @@ const StashOrTrashList = ({ user, authReady, db }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!db || !user || !authReady) {
+    if (!db || !authReady) {
       setLoading(false);
       return;
     }
@@ -279,11 +277,8 @@ const StashOrTrashList = ({ user, authReady, db }) => {
       "data",
       "submissions"
     );
-    const q = query(
-      submissionsCollectionRef,
-      where("userId", "==", user.uid),
-      orderBy("timestamp", "desc")
-    );
+    // Removed orderBy to avoid the need for an index, sorting client-side instead.
+    const q = query(submissionsCollectionRef);
 
     const unsubscribe = onSnapshot(
       q,
@@ -292,6 +287,8 @@ const StashOrTrashList = ({ user, authReady, db }) => {
           id: doc.id,
           ...doc.data(),
         }));
+        // Sort items by timestamp client-side
+        allItems.sort((a, b) => (b.timestamp?.toDate()?.getTime() || 0) - (a.timestamp?.toDate()?.getTime() || 0));
         setItems(allItems);
         setLoading(false);
       },
@@ -302,7 +299,7 @@ const StashOrTrashList = ({ user, authReady, db }) => {
     );
 
     return () => unsubscribe();
-  }, [user, authReady, db]);
+  }, [authReady, db]);
 
   if (loading) {
     return (
@@ -397,11 +394,8 @@ const UserWall = ({ user, authReady, db }) => {
       "data",
       "submissions"
     );
-    const q = query(
-      submissionsCollectionRef,
-      where("userId", "==", user.uid),
-      orderBy("timestamp", "desc")
-    );
+    // Removed all query constraints to fetch all data.
+    const q = query(submissionsCollectionRef);
 
     const unsubscribe = onSnapshot(
       q,
@@ -410,7 +404,12 @@ const UserWall = ({ user, authReady, db }) => {
           id: doc.id,
           ...doc.data(),
         }));
-        setItems(allItems);
+        // Filter and sort items by timestamp client-side
+        const userItems = allItems
+          .filter(item => item.userId === user.uid)
+          .sort((a, b) => (b.timestamp?.toDate()?.getTime() || 0) - (a.timestamp?.toDate()?.getTime() || 0));
+        
+        setItems(userItems);
         setLoading(false);
       },
       (error) => {
@@ -598,7 +597,7 @@ const App = () => {
           } else {
             console.log("No user signed in. Attempting to sign in with custom token or anonymously...");
             try {
-              if (__initial_auth_token) {
+              if (typeof __initial_auth_token !== 'undefined') {
                 await signInWithCustomToken(auth, __initial_auth_token);
               } else {
                 await signInAnonymously(auth);
