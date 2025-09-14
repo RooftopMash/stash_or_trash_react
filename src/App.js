@@ -262,12 +262,12 @@ const SubmissionForm = ({ userId, db, storage }) => {
   );
 };
 
-const StashOrTrashList = ({ userId, authReady, db }) => {
+const StashOrTrashList = ({ user, authReady, db }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!db || !authReady) {
+    if (!db || !user || !authReady) {
       setLoading(false);
       return;
     }
@@ -279,7 +279,11 @@ const StashOrTrashList = ({ userId, authReady, db }) => {
       "data",
       "submissions"
     );
-    const q = query(submissionsCollectionRef, orderBy("timestamp", "desc"));
+    const q = query(
+      submissionsCollectionRef,
+      where("userId", "==", user.uid),
+      orderBy("timestamp", "desc")
+    );
 
     const unsubscribe = onSnapshot(
       q,
@@ -298,7 +302,7 @@ const StashOrTrashList = ({ userId, authReady, db }) => {
     );
 
     return () => unsubscribe();
-  }, [userId, authReady, db]);
+  }, [user, authReady, db]);
 
   if (loading) {
     return (
@@ -376,12 +380,12 @@ const StashOrTrashList = ({ userId, authReady, db }) => {
   );
 };
 
-const UserWall = ({ userId, authReady, db }) => {
+const UserWall = ({ user, authReady, db }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!db || !userId || !authReady) {
+    if (!db || !user || !authReady) {
       setLoading(false);
       return;
     }
@@ -395,7 +399,7 @@ const UserWall = ({ userId, authReady, db }) => {
     );
     const q = query(
       submissionsCollectionRef,
-      where("userId", "==", userId),
+      where("userId", "==", user.uid),
       orderBy("timestamp", "desc")
     );
 
@@ -416,7 +420,7 @@ const UserWall = ({ userId, authReady, db }) => {
     );
 
     return () => unsubscribe();
-  }, [userId, authReady, db]);
+  }, [user, authReady, db]);
 
   if (loading) {
     return (
@@ -551,9 +555,9 @@ const HomePage = ({ user, authReady, db, storage }) => {
       </header>
       <main className="w-full max-w-7xl mx-auto p-4">
         {activeTab === "all" ? (
-          <StashOrTrashList userId={user?.uid} authReady={authReady} db={db} />
+          <StashOrTrashList user={user} authReady={authReady} db={db} />
         ) : (
-          <UserWall userId={user?.uid} authReady={authReady} db={db} />
+          <UserWall user={user} authReady={authReady} db={db} />
         )}
       </main>
       <footer className="bg-white shadow-inner p-6 mt-8">
@@ -590,11 +594,17 @@ const App = () => {
         onAuthStateChanged(auth, async (currentUser) => {
           if (currentUser) {
             setUser(currentUser);
+            console.log("User signed in with UID:", currentUser.uid);
           } else {
-            if (__initial_auth_token) {
-              await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-              await signInAnonymously(auth);
+            console.log("No user signed in. Attempting to sign in with custom token or anonymously...");
+            try {
+              if (__initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+              } else {
+                await signInAnonymously(auth);
+              }
+            } catch (error) {
+              console.error("Authentication failed:", error);
             }
           }
           setAuthReady(true);
