@@ -62,9 +62,9 @@ const translations = {
 
 // Firebase initialization
 setLogLevel('debug');
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+const firebaseConfig = process.env.REACT_APP_FIREBASE_CONFIG ? JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG) : null;
+const initialAuthToken = process.env.REACT_APP_INITIAL_AUTH_TOKEN || null;
 
 const app = firebaseConfig ? initializeApp(firebaseConfig) : null;
 const auth = app ? getAuth(app) : null;
