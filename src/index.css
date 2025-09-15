@@ -1,5 +1,5 @@
 body, .font-sans {
-  background-image: url('/icons/logo.svg'); /* Or /assets/logo.png for fallback */
+  background-image: url('/icons/favicon[1].svg');
   background-repeat: repeat;
   background-size: 200px;
   opacity: 1;
