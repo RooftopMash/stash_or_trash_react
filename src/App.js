@@ -13,11 +13,10 @@ import {
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-// --- SVG brand logo everywhere for Silicon Valley Surpassing Standard! ---
-const svgLogo = "/icons/favicon[1].svg"; // Use SVG logo for crispness everywhere
-const pngLogo = require("./assets/app-logo.png"); // fallback for legacy or image-only use
+// SVG brand logo everywhere for Silicon Valley Surpassing Standard!
+const svgLogo = "/icons/favicon[1].svg";
 
-// --- i18n and country language detection ---
+// i18n and country language detection
 const countryLanguageMap = {
   'US': 'en', 'GB': 'en', 'FR': 'fr', 'ES': 'es', 'DE': 'de', 'IT': 'it', 'JP': 'ja', 'KR': 'ko',
 };
@@ -57,10 +56,10 @@ const translations = {
     notificationError: "Something went wrong.",
     notificationTitle: "Notification",
   },
-  // ...other translations from your file
+  // ...other translations
 };
 
-// Firebase initialization
+// Firebase initialization with environment variables
 setLogLevel('debug');
 const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
 const firebaseConfig = process.env.REACT_APP_FIREBASE_CONFIG ? JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG) : null;
@@ -645,10 +644,6 @@ const App = () => {
 
   // Notification/modal/toast state
   const [showModal, setShowModal] = useState(false);
-  const [modalMsg, setModalMsg] = useState("");
-  const [modalTitle, setModalTitle] = useState("");
-  const [modalSuccess, setModalSuccess] = useState(true);
-
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastSuccess, setToastSuccess] = useState(true);
@@ -712,9 +707,8 @@ const App = () => {
   return (
     <div className="font-sans min-h-screen">
       <div className="bg-gray-800 text-white py-4 px-6 flex justify-between items-center rounded-b-lg shadow-lg">
-        {/* --- LOGO in NAVBAR --- */}
+        {/* LOGO in NAVBAR */}
         <div className="flex items-center space-x-3">
-          {/* SVG logo for infinite crispness in navbar */}
           <img
             src={svgLogo}
             alt="Platform Logo"
@@ -749,14 +743,27 @@ const App = () => {
       {/* Toast notification */}
       <Toast show={showToast} message={toastMsg} isSuccess={toastSuccess} onClose={() => setShowToast(false)} />
       {/* Modal example (can be triggered elsewhere if needed) */}
-      <Modal show={showModal} onClose={() => setShowModal(false)} title={modalTitle || t('notificationTitle')} message={modalMsg} isSuccess={modalSuccess} />
+      <Modal show={showModal} onClose={() => setShowModal(false)} title={t('notificationTitle')} message={""} isSuccess={true} />
       {/* Page content */}
       {currentPage === "home" && <HomePage user={user} authReady={authReady} t={t} onNotify={handleNotify} />}
       {currentPage === "profile" && <ProfilePage user={user} authReady={authReady} t={t} />}
-      {/* Brand footer */}
-      <footer className="flex items-center justify-center py-8 bg-gray-100 border-t mt-16">
-        <img src={svgLogo} alt="footer logo" className="h-8 w-8 mr-2" />
-        <span className="text-gray-600 font-light">Stash or Trash &copy; {new Date().getFullYear()}</span>
+      {/* Premium Silicon Valley-style footer */}
+      <footer className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white py-8 px-4 mt-16 border-t shadow-lg">
+        <div className="flex flex-col md:flex-row items-center justify-between max-w-6xl mx-auto space-y-4 md:space-y-0">
+          <div className="flex items-center space-x-4">
+            <img src={svgLogo} alt="Stash or Trash Logo" className="h-10 w-10 rounded-full shadow-lg border-2 border-white" />
+            <span className="font-bold text-xl tracking-tight">Stash or Trash</span>
+            <span className="ml-2 px-2 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold shadow">Silicon Valley Surpassing</span>
+          </div>
+          <div className="flex space-x-6 text-sm">
+            <a href="https://github.com/RooftopMash/stash_or_trash_react" className="hover:underline hover:text-blue-400 transition">GitHub</a>
+            <a href="/privacy" className="hover:underline hover:text-blue-400 transition">Privacy</a>
+            <a href="/terms" className="hover:underline hover:text-blue-400 transition">Terms</a>
+          </div>
+          <div className="text-xs text-gray-300">
+            &copy; {new Date().getFullYear()} Stash or Trash. All rights reserved.
+          </div>
+        </div>
       </footer>
     </div>
   );
