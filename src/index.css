@@ -1,0 +1,8 @@
+body, .font-sans {
+  background-image: url('/icons/logo.svg'); /* Or /assets/logo.png for fallback */
+  background-repeat: repeat;
+  background-size: 200px;
+  opacity: 1;
+  /* Optionally add tint/filter for subtlety */
+  /* filter: grayscale(1) opacity(0.03); */
+}
