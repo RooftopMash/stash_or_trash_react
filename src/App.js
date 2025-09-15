@@ -14,7 +14,7 @@ import {
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // --- SVG brand logo everywhere for Silicon Valley Surpassing Standard! ---
-const svgLogo = "/icons/logo.svg"; // Use SVG logo for crispness everywhere
+const svgLogo = "/icons/favicon[1].svg"; // Use SVG logo for crispness everywhere
 const pngLogo = require("./assets/app-logo.png"); // fallback for legacy or image-only use
 
 // --- i18n and country language detection ---
