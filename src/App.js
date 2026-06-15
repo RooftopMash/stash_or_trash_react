@@ -105,7 +105,7 @@ const Button = ({
     onClick={onClick}
     disabled={disabled}
     aria-label={ariaLabel}
-    className={`inline-flex items-center justify-center rounded-md text-xl font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-12 w-12 ${className || ""}`}
+    className={`inline-flex items-center justify-center rounded-md text-xl font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 ${className || ""}`}
   >
     {children}
   </button>
@@ -126,7 +126,7 @@ const Input = ({
     value={value}
     onChange={onChange || onChangeFile}
     accept={accept}
-    className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className || ""}`}
+    className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className || ""}`}
   />
 );
 
@@ -286,7 +286,7 @@ const SubmissionForm = ({ userId, t, onNotify }) => {
           <h2 className="text-3xl font-extrabold mb-6 text-center text-gray-900 tracking-tight">{t('stashOrTrash')}</h2>
           <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
             <textarea
-              className="flex w-full min-h-[100px] rounded-md border border-gray-300 bg-white px-3 py-2 text-lg placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full min-h-[100px] rounded-md border border-gray-300 bg-white px-3 py-2 text-lg placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               placeholder={t('describeItem')}
               value={description}
               onChange={handleDescriptionChange}
