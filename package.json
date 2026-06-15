@@ -1,7 +1,7 @@
 {
   "name": "stash-or-trash",
   "version": "1.0.0",
-  "description": "Stash or Trash - Product & Brand Rating WebApp",
+  "description": "Stash or Trash - Two-sided Brand Rating & Engagement Platform",
   "main": "src/index.js",
   "scripts": {
     "start": "react-scripts start",
@@ -19,12 +19,13 @@
     "react-i18next": "^14.1.2",
     "i18next-browser-languagedetector": "^8.0.0",
     "i18next-http-backend": "^2.5.2",
-    "@mui/material": "^5.15.15",
-    "@emotion/react": "^11.11.4",
-    "@emotion/styled": "^11.11.5",
     "tailwindcss": "^3.3.0",
     "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.24"
+    "postcss": "^8.4.24",
+    "axios": "^1.6.0",
+    "date-fns": "^2.30.0",
+    "react-hot-toast": "^2.4.1",
+    "recharts": "^2.10.3"
   },
   "devDependencies": {},
   "keywords": [],
