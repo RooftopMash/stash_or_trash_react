@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import { getUserProfile } from '../services/authService';
 
 export const AuthContext = createContext();
 
@@ -14,12 +15,29 @@ export const AuthProvider = ({ children }) => {
   const [trustScore, setTrustScore] = useState(0);
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      setError('Firebase is not configured. Add REACT_APP_FIREBASE_CONFIG to enable authentication.');
+      return undefined;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       try {
         if (currentUser) {
           setUser(currentUser);
-          // Fetch user profile and verification status
-          // This will be implemented with Firebase Firestore
+          const userProfile = await getUserProfile(currentUser.uid);
+
+          if (userProfile) {
+            setProfile(userProfile);
+            setUserType(userProfile.userType || 'user');
+            setVerificationStatus(userProfile.verified || false);
+            setTrustScore(userProfile.trustScore || 0);
+          } else {
+            setProfile(null);
+            setUserType('user');
+            setVerificationStatus(false);
+            setTrustScore(0);
+          }
         } else {
           setUser(null);
           setProfile(null);
@@ -29,6 +47,11 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         setError(err.message);
+        setUser(null);
+        setProfile(null);
+        setUserType(null);
+        setVerificationStatus(null);
+        setTrustScore(0);
       } finally {
         setLoading(false);
       }
