@@ -14,9 +14,16 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 const googleProvider = new GoogleAuthProvider();
 const facebookProvider = new FacebookAuthProvider();
 
+const requireFirebase = () => {
+  if (!auth || !db) {
+    throw new Error('Firebase is not configured. Add REACT_APP_FIREBASE_CONFIG before using authentication.');
+  }
+};
+
 // Social Login
 export const signInWithGoogle = async () => {
   try {
+    requireFirebase();
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error) {
@@ -26,6 +33,7 @@ export const signInWithGoogle = async () => {
 
 export const signInWithFacebook = async () => {
   try {
+    requireFirebase();
     const result = await signInWithPopup(auth, facebookProvider);
     return result.user;
   } catch (error) {
@@ -36,6 +44,7 @@ export const signInWithFacebook = async () => {
 // Email Auth
 export const signUpWithEmail = async (email, password, displayName) => {
   try {
+    requireFirebase();
     const result = await createUserWithEmailAndPassword(auth, email, password);
     
     // Update profile
@@ -64,6 +73,7 @@ export const signUpWithEmail = async (email, password, displayName) => {
 
 export const signInWithEmail = async (email, password) => {
   try {
+    requireFirebase();
     const result = await signInWithEmailAndPassword(auth, email, password);
     return result.user;
   } catch (error) {
@@ -74,6 +84,7 @@ export const signInWithEmail = async (email, password) => {
 // Sign Out
 export const signOut = async () => {
   try {
+    requireFirebase();
     await firebaseSignOut(auth);
   } catch (error) {
     throw error;
@@ -83,6 +94,7 @@ export const signOut = async () => {
 // Get User Profile
 export const getUserProfile = async (uid) => {
   try {
+    requireFirebase();
     const docRef = doc(db, 'users', uid);
     const docSnap = await getDoc(docRef);
     
@@ -100,6 +112,7 @@ export const getUserProfile = async (uid) => {
 // Update User Profile
 export const updateUserProfile = async (uid, data) => {
   try {
+    requireFirebase();
     const docRef = doc(db, 'users', uid);
     await setDoc(docRef, data, { merge: true });
   } catch (error) {
@@ -110,6 +123,7 @@ export const updateUserProfile = async (uid, data) => {
 // Add Verified Platform
 export const addVerifiedPlatform = async (uid, platformId, platformData) => {
   try {
+    requireFirebase();
     const docRef = doc(db, 'users', uid);
     const docSnap = await getDoc(docRef);
     
